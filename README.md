@@ -21,12 +21,26 @@ pip install -e ".[dev]"
 pytest
 ```
 
+Run a live scrape:
+
+```bash
+python -c "import asyncio; from az_job_radar.collect import collect; print(len(asyncio.run(collect())))"
+```
+
+## Sources
+
+| Site | How | Notes |
+|---|---|---|
+| boss.az | HTML pages, parsed with BeautifulSoup | IT categories only |
+| jobsearch.az | Public JSON endpoint used by the site itself | Follows the `next` link, 3 pages |
+
 ## Roadmap
 
 - [x] Project setup: package layout, `Vacancy` model, tests, CI
-- [ ] First scraper: parse one listing page from saved HTML (offline test fixture)
-- [ ] Fetch multiple pages concurrently with `asyncio.gather` + rate limiting
-- [ ] Respect `robots.txt`
+- [x] boss.az scraper (HTML, IT categories) with an offline fixture
+- [x] jobsearch.az scraper (JSON API with pagination)
+- [x] Run all sources concurrently with `asyncio.gather`, polite delay between requests
+- [x] Respect `robots.txt`
 - [ ] Normalization: titles, salaries, tech tags (Python, React, Go...)
 - [ ] Deduplication by `uid`
 - [ ] Store in PostgreSQL (SQLAlchemy + Alembic migrations)
