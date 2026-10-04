@@ -1,0 +1,246 @@
+{
+  "items": [
+    {
+      "id": 152916,
+      "title": "IELTS müəllimi — Head of IELTS (Full-time)",
+      "is_new": true,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-10-03T00:00:00+04:00",
+      "slug": "knight-academy-ielts-muellimi-head-of-ielts-full-time-152916",
+      "company": {
+        "title": "Knight Academy",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/121061/whatsapp-image-2026-09-19-at-113454-1.jpeg",
+        "first_char": "k",
+        "has_story": true,
+        "id": 121061
+      },
+      "salary": "1000",
+      "hide_company": false,
+      "view_count": 186
+    },
+    {
+      "id": 152914,
+      "title": "Mühasibatlıq və HR üzrə Praktiki Təcrübə Proqramı (İş İmkanı ilə)",
+      "is_new": true,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-10-03T00:00:00+04:00",
+      "slug": "baa-consulting-muhasibatliq-ve-hr-uzre-praktiki-tecrube-proqrami-is-imkani-ile-152914",
+      "company": {
+        "title": "BAA Consulting",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/103583/baku-accountants-associates.svg",
+        "first_char": "b",
+        "has_story": true,
+        "id": 103583
+      },
+      "salary": "",
+      "hide_company": false,
+      "view_count": 508
+    },
+    {
+      "id": 152907,
+      "title": "Marketinq direktoru",
+      "is_new": true,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-10-02T00:00:00+04:00",
+      "slug": "improve-group-marketinq-direktoru-152907",
+      "company": {
+        "title": "Improve Group",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/34103/whatsapp-image-2025-12-05-at-092651.jpeg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 34103
+      },
+      "salary": "200",
+      "hide_company": false,
+      "view_count": 515
+    },
+    {
+      "id": 152816,
+      "title": "HR Compliance & Employee Relations Specialist",
+      "is_new": true,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-10-02T00:00:00+04:00",
+      "slug": "ires-hr-compliance-employee-relations-specialist-152816",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "",
+      "hide_company": false,
+      "view_count": 476
+    },
+    {
+      "id": 152811,
+      "title": "QA/QC Manager",
+      "is_new": true,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-10-02T00:00:00+04:00",
+      "slug": "ires-qaqc-manager-152811",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "",
+      "hide_company": false,
+      "view_count": 341
+    },
+    {
+      "id": 152726,
+      "title": "Facility Operations Manager",
+      "is_new": false,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-10-01T00:00:00+04:00",
+      "slug": "ires-facility-operations-manager-152726",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "3500",
+      "hide_company": false,
+      "view_count": 424
+    },
+    {
+      "id": 152740,
+      "title": "Leasing Officer",
+      "is_new": false,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-10-01T00:00:00+04:00",
+      "slug": "ires-leasing-officer-152740",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "2000",
+      "hide_company": false,
+      "view_count": 316
+    },
+    {
+      "id": 152563,
+      "title": "Commercial & Leasing Manager (Office Space Rentals)",
+      "is_new": false,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-09-30T00:00:00+04:00",
+      "slug": "ires-commercial-leasing-manager-office-space-rentals-152563",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "4000",
+      "hide_company": false,
+      "view_count": 355
+    },
+    {
+      "id": 152470,
+      "title": "Senior Project Contract Specialist",
+      "is_new": false,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-09-29T00:00:00+04:00",
+      "slug": "ires-senior-project-contract-specialist-152470",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "",
+      "hide_company": false,
+      "view_count": 624
+    },
+    {
+      "id": 152397,
+      "title": "TV Director (Live News)",
+      "is_new": false,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-09-28T00:00:00+04:00",
+      "slug": "ires-tv-director-live-news-152397",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "",
+      "hide_company": false,
+      "view_count": 536
+    },
+    {
+      "id": 152399,
+      "title": "Senior Editor (News Output)",
+      "is_new": false,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-09-28T00:00:00+04:00",
+      "slug": "ires-senior-editor-news-output-152399",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "",
+      "hide_company": false,
+      "view_count": 223
+    },
+    {
+      "id": 152400,
+      "title": "Production Director (News)",
+      "is_new": false,
+      "is_favorite": false,
+      "is_vip": true,
+      "created_at": "2026-09-28T00:00:00+04:00",
+      "slug": "ires-production-director-news-152400",
+      "company": {
+        "title": "IRES",
+        "logo": "",
+        "logo_mini": "https://storage.jobsearch.az/storage/pages/4791/logo-ires-jss1.svg",
+        "first_char": "i",
+        "has_story": true,
+        "id": 4791
+      },
+      "salary": "",
+      "hide_company": false,
+      "view_count": 344
+    }
+  ],
+  "banners": [],
+  "next": "https://unsu.jobsearch.az/api-az/vacancies-az?hl=az&ignore=MTUyOTE2LDE1MjkxNCwxNTI5MDcsMTUyODE2LDE1MjgxMSwxNTI3MjYsMTUyNzQwLDE1MjU2MywxNTI0NzAsMTUyMzk3LDE1MjM5OSwxNTI0MDAsMTUyMzMzLDE1MjkxNywxNTI5MTUsMTUyOTE5LDE1MjkyMSwxNTI5MTgsMTUyOTEyLDE1MjkyMCwxNTI2NTUsMTUyOTEzLDE1MjkyMiwxNTI3OTEsMTUwMTkyLDE1Mjc5MCwxNDY5MjgsMTUyNzkzLDE1Mjc4OSwxNTI3ODg%3D&ignore_hash=94e208dc47e37f3b58096a7c2d979dbf&page=2"
+}
