@@ -10,6 +10,7 @@ class Vacancy:
     title: str
     company: str
     url: str
+    location: str | None = None
     published_on: date | None = None
     salary_min: Decimal | None = None
     salary_max: Decimal | None = None
