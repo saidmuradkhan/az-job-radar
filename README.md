@@ -5,6 +5,8 @@
 Async scraper and data pipeline that collects job vacancies from Azerbaijani job sites,
 cleans and stores them, and exposes tech-demand analytics through a FastAPI REST API.
 
+**Live demo:** [radar.saidmuradkhan.dev](https://radar.saidmuradkhan.dev) · [API docs](https://radar.saidmuradkhan.dev/docs) *(private preview, login required for now)*
+
 > Part of a 3-service system: **az-job-radar** (Python) · [cbar-rates](https://github.com/saidmuradkhan/cbar-rates) (Go) · [jobtrack](https://github.com/saidmuradkhan/jobtrack) (Django + React)
 
 ## Tech stack
