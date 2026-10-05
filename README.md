@@ -9,8 +9,8 @@ cleans and stores them, and exposes tech-demand analytics through a FastAPI REST
 
 ## Tech stack
 
-Python 3.12+ · asyncio · httpx · BeautifulSoup · pytest · Ruff · GitHub Actions
-*(planned: PostgreSQL, SQLAlchemy, FastAPI, Docker)*
+Python 3.12+ · asyncio · httpx · BeautifulSoup · FastAPI · pytest · Ruff · GitHub Actions · Vercel
+*(planned: PostgreSQL, SQLAlchemy, Docker)*
 
 ## Getting started
 
@@ -21,11 +21,33 @@ pip install -e ".[dev]"
 pytest
 ```
 
+Run the web app (dashboard at `/`, JSON at `/vacancies`, API docs at `/docs`):
+
+```bash
+uvicorn index:app --reload
+```
+
 Run a live scrape:
 
 ```bash
 python -c "import asyncio; from az_job_radar.collect import collect; print(len(asyncio.run(collect())))"
 ```
+
+## Deployment
+
+The app runs on Vercel as a single Python function (`index.py`, see `vercel.json`).
+Until the database lands, vacancies are scraped on demand and cached in memory for 30 minutes,
+so the first request after a cold start takes ~20 seconds.
+
+While the project is in review, the site is behind a small login page. It is turned on by
+environment variables and turned off by removing them:
+
+| Variable | Purpose |
+|---|---|
+| `PREVIEW_USER`, `PREVIEW_PASSWORD` | Login credentials. If either is missing, the site is public. |
+| `PREVIEW_SECRET` | Key for signing the session cookie. Other services can send it as `X-Preview-Token`. |
+
+`/health` is always public.
 
 ## Sources
 
@@ -46,7 +68,9 @@ python -c "import asyncio; from az_job_radar.collect import collect; print(len(a
 - [ ] Store in PostgreSQL (SQLAlchemy + Alembic migrations)
 - [ ] CLI: `az-job-radar scrape`
 - [ ] Analytics: most requested technologies, salary ranges
-- [ ] FastAPI: `/vacancies`, `/stats/technologies`
+- [x] FastAPI: `/vacancies` and a simple dashboard
+- [x] Preview deployment on Vercel behind a login page
+- [ ] FastAPI: `/stats/technologies`, `/stats/salaries`
 - [ ] Docker + docker-compose
 - [ ] Scheduled scraping (GitHub Actions cron)
 
