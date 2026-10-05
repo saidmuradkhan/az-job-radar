@@ -106,7 +106,7 @@ async def submit_login(request: Request) -> Response:
         gate.make_token(),
         max_age=COOKIE_MAX_AGE,
         httponly=True,
-        secure=request.url.scheme == "https",
+        secure=request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https",
         samesite="lax",
     )
     return response
