@@ -1,4 +1,8 @@
 import re
+from dataclasses import replace
+from datetime import date
+
+from az_job_radar.models import Vacancy
 
 URGENT_MARK = re.compile(r"\b(?:[tT][əƏeE][cC][iİI][lL][iİI]|urgent)\b[!:.]*", re.IGNORECASE)
 EDGE_JUNK = " -–—|,.!*\"'"
@@ -48,3 +52,29 @@ def clean_title(title: str) -> str:
 
 def extract_tags(text: str) -> tuple[str, ...]:
     return tuple(tag for tag, pattern in TAG_PATTERNS.items() if pattern.search(text))
+
+
+def dedupe(vacancies: list[Vacancy]) -> list[Vacancy]:
+    newest: dict[str, Vacancy] = {}
+    for vacancy in vacancies:
+        current = newest.get(vacancy.uid)
+        if current is None or (vacancy.published_on or date.min) > (
+            current.published_on or date.min
+        ):
+            newest[vacancy.uid] = vacancy
+    return list(newest.values())
+
+
+def process(vacancies: list[Vacancy]) -> list[Vacancy]:
+    cleaned = []
+    for vacancy in vacancies:
+        title = clean_title(vacancy.title)
+        cleaned.append(
+            replace(
+                vacancy,
+                title=title,
+                company=vacancy.company.strip(),
+                tags=extract_tags(title),
+            )
+        )
+    return dedupe(cleaned)
