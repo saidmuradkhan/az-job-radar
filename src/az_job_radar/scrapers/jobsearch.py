@@ -2,7 +2,7 @@ import json
 from datetime import date
 
 from az_job_radar.models import Vacancy
-from az_job_radar.parsing import parse_salary
+from az_job_radar.parsing import parse_currency, parse_salary
 from az_job_radar.scrapers.base import BaseScraper
 
 API_URL = "https://jobsearch.az/api-az/vacancies-az?hl=az"
@@ -24,7 +24,8 @@ class JobSearchScraper(BaseScraper):
 
             company = item.get("company") or {}
             created_at = item.get("created_at")
-            salary_min, salary_max = parse_salary(item.get("salary"))
+            salary_text = item.get("salary")
+            salary_min, salary_max = parse_salary(salary_text)
             vacancies.append(
                 Vacancy(
                     source=self.source,
@@ -35,6 +36,7 @@ class JobSearchScraper(BaseScraper):
                     published_on=date.fromisoformat(created_at[:10]) if created_at else None,
                     salary_min=salary_min,
                     salary_max=salary_max,
+                    currency=parse_currency(salary_text),
                 )
             )
         return vacancies

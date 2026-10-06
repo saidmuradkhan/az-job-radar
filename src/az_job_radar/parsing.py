@@ -20,6 +20,22 @@ AZ_MONTHS = {
 NUMBER_PATTERN = re.compile(r"\d+(?:[  ]\d{3})*")
 UPPER_BOUND_WORDS = ("dək", "dek", "qədər", "kimi")
 LOWER_BOUND_WORDS = ("dən", "dan", "başlayaraq")
+CURRENCY_MARKERS = {
+    "$": "USD",
+    "usd": "USD",
+    "dollar": "USD",
+    "€": "EUR",
+    "eur": "EUR",
+    "avro": "EUR",
+}
+
+
+def parse_currency(text: str | None) -> str:
+    lowered = (text or "").lower()
+    for marker, code in CURRENCY_MARKERS.items():
+        if marker in lowered:
+            return code
+    return "AZN"
 
 
 def parse_salary(text: str | None) -> tuple[Decimal | None, Decimal | None]:

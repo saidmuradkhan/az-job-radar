@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from az_job_radar.parsing import parse_listing_date, parse_salary
+from az_job_radar.parsing import parse_currency, parse_listing_date, parse_salary
 
 TODAY = date(2026, 10, 4)
 
@@ -41,3 +41,19 @@ def test_parse_salary(text, expected):
 )
 def test_parse_listing_date(text, expected):
     assert parse_listing_date(text, TODAY) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("1000 - 1200 ₼", "AZN"),
+        ("1500 AZN", "AZN"),
+        ("2000 $", "USD"),
+        ("2000 USD", "USD"),
+        ("1800 €", "EUR"),
+        ("Razılaşma ilə", "AZN"),
+        (None, "AZN"),
+    ],
+)
+def test_parse_currency(text, expected):
+    assert parse_currency(text) == expected

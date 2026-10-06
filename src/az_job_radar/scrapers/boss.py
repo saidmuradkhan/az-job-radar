@@ -6,7 +6,7 @@ import httpx
 from bs4 import BeautifulSoup, Tag
 
 from az_job_radar.models import Vacancy
-from az_job_radar.parsing import parse_listing_date, parse_salary
+from az_job_radar.parsing import parse_currency, parse_listing_date, parse_salary
 from az_job_radar.robots import RobotsPolicy
 from az_job_radar.scrapers.base import BaseScraper
 
@@ -49,7 +49,8 @@ class BossScraper(BaseScraper):
             if not match or not title:
                 continue
 
-            salary_min, salary_max = parse_salary(field_text(card, "ad-card-salary"))
+            salary_text = field_text(card, "ad-card-salary")
+            salary_min, salary_max = parse_salary(salary_text)
             vacancies.append(
                 Vacancy(
                     source=self.source,
@@ -61,6 +62,7 @@ class BossScraper(BaseScraper):
                     published_on=parse_listing_date(field_text(card, "ad-card-date"), today),
                     salary_min=salary_min,
                     salary_max=salary_max,
+                    currency=parse_currency(salary_text),
                 )
             )
 
