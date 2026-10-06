@@ -2,8 +2,10 @@ import os
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import JSON, DateTime, Engine, Numeric, String, Text, create_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import JSON, DateTime, Engine, Numeric, String, Text, create_engine, select
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+
+from az_job_radar.models import Vacancy
 
 DEFAULT_DATABASE_URL = "sqlite:///az_job_radar.db"
 
@@ -55,3 +57,37 @@ def get_engine(url: str | None = None) -> Engine:
     engine = create_engine(url or database_url())
     Base.metadata.create_all(engine)
     return engine
+
+
+def fill_row(row: VacancyRow, vacancy: Vacancy) -> None:
+    row.source = vacancy.source
+    row.external_id = vacancy.external_id
+    row.title = vacancy.title
+    row.company = vacancy.company
+    row.url = vacancy.url
+    row.location = vacancy.location
+    row.published_on = vacancy.published_on
+    row.salary_min = vacancy.salary_min
+    row.salary_max = vacancy.salary_max
+    row.currency = vacancy.currency
+    row.tags = list(vacancy.tags)
+
+
+def upsert_vacancies(session: Session, vacancies: list[Vacancy], seen_at: datetime) -> int:
+    """Insert new vacancies and refresh known ones. Returns how many were new."""
+    uids = [vacancy.uid for vacancy in vacancies]
+    existing = {
+        row.uid: row for row in session.scalars(select(VacancyRow).where(VacancyRow.uid.in_(uids)))
+    }
+
+    new_count = 0
+    for vacancy in vacancies:
+        row = existing.get(vacancy.uid)
+        if row is None:
+            row = VacancyRow(uid=vacancy.uid, first_seen_at=seen_at)
+            session.add(row)
+            existing[vacancy.uid] = row
+            new_count += 1
+        fill_row(row, vacancy)
+        row.last_seen_at = seen_at
+    return new_count
