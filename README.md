@@ -11,8 +11,8 @@ cleans and stores them, and exposes tech-demand analytics through a FastAPI REST
 
 ## Tech stack
 
-Python 3.12+ · asyncio · httpx · BeautifulSoup · FastAPI · pytest · Ruff · GitHub Actions · Vercel
-*(planned: PostgreSQL, SQLAlchemy, Docker)*
+Python 3.12+ · asyncio · httpx · BeautifulSoup · SQLAlchemy · FastAPI · pytest · Ruff · GitHub Actions · Vercel
+*(planned: PostgreSQL on Neon, Docker)*
 
 ## Getting started
 
@@ -29,11 +29,26 @@ Run the web app (dashboard at `/`, JSON at `/vacancies`, API docs at `/docs`):
 uvicorn index:app --reload
 ```
 
-Run a live scrape:
+Scrape all sources and save the results:
 
 ```bash
-python -c "import asyncio; from az_job_radar.collect import collect; print(len(asyncio.run(collect())))"
+az-job-radar scrape
+# INFO az_job_radar.collect: boss.az: 16 vacancies
+# INFO az_job_radar.collect: jobsearch.az: 90 vacancies
+# Run #1: ok, 106 vacancies found, 106 new
 ```
+
+By default the data goes to a local SQLite file, `az_job_radar.db`. Set `DATABASE_URL`
+(or pass `--database-url`) to use Postgres; install the driver with `pip install -e ".[postgres]"`.
+
+## How the data flows
+
+1. **Scrapers** (`scrapers/`) fetch every source at the same time and turn pages into `Vacancy` objects.
+2. **Pipeline** (`pipeline.py`) cleans titles (`"TƏCİLİ! Backend developer"` → `"Backend developer"`),
+   adds tech tags (`python`, `react`, `c#`, `1c`...) and drops duplicates by `uid` (`source:id`).
+   Salaries are parsed while scraping: `"1500 - 2000 AZN"`, `"2000 ₼-dək"`, `"Razılaşma ilə"`, plus the currency.
+3. **Database** (`db.py`) upserts into `vacancies`, keeping `first_seen_at` and updating `last_seen_at`.
+   Every run is logged in `scrape_runs` (status, how many found, how many new, error).
 
 ## Deployment
 
@@ -65,10 +80,11 @@ environment variables and turned off by removing them:
 - [x] jobsearch.az scraper (JSON API with pagination)
 - [x] Run all sources concurrently with `asyncio.gather`, polite delay between requests
 - [x] Respect `robots.txt`
-- [ ] Normalization: titles, salaries, tech tags (Python, React, Go...)
-- [ ] Deduplication by `uid`
-- [ ] Store in PostgreSQL (SQLAlchemy + Alembic migrations)
-- [ ] CLI: `az-job-radar scrape`
+- [x] Normalization: titles, salaries, tech tags (Python, React, Go...)
+- [x] Deduplication by `uid`
+- [x] Store with SQLAlchemy (SQLite locally, `DATABASE_URL` for Postgres), log scrape runs
+- [ ] Postgres on Neon + Alembic migrations
+- [x] CLI: `az-job-radar scrape`
 - [ ] Analytics: most requested technologies, salary ranges
 - [x] FastAPI: `/vacancies` and a simple dashboard
 - [x] Preview deployment on Vercel behind a login page
