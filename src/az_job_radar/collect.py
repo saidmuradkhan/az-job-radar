@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from az_job_radar.models import Vacancy
+from az_job_radar.pipeline import process
 from az_job_radar.robots import RobotsPolicy
 from az_job_radar.scrapers.base import USER_AGENT, BaseScraper, build_client
 from az_job_radar.scrapers.boss import BossScraper
@@ -15,15 +16,14 @@ async def run_scrapers(scrapers: list[BaseScraper]) -> list[Vacancy]:
         *(scraper.scrape() for scraper in scrapers), return_exceptions=True
     )
 
-    unique: dict[str, Vacancy] = {}
+    vacancies: list[Vacancy] = []
     for scraper, result in zip(scrapers, results, strict=True):
         if isinstance(result, Exception):
             logger.warning("%s failed: %s", scraper.source, result)
             continue
         logger.info("%s: %d vacancies", scraper.source, len(result))
-        for vacancy in result:
-            unique.setdefault(vacancy.uid, vacancy)
-    return list(unique.values())
+        vacancies.extend(result)
+    return process(vacancies)
 
 
 async def collect() -> list[Vacancy]:
