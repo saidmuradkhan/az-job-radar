@@ -26,6 +26,9 @@ dev = [
     "uvicorn>=0.30",
 ]
 
+[project.scripts]
+az-job-radar = "az_job_radar.cli:main"
+
 [tool.vercel]
 entrypoint = "index:app"
 
