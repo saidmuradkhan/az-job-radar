@@ -32,8 +32,9 @@ async def scrape_and_store(engine: Engine, fetch: Fetch) -> ScrapeRun:
             run.duplicates = mark_duplicates(session, since=now() - DUPLICATE_WINDOW)
             run.status = "ok"
         except Exception as error:
-            logger.exception("Scrape run %s failed", run.id)
+            # Roll back first: after a failed flush the session can't even read run.id.
             session.rollback()
+            logger.exception("Scrape run %s failed", run.id)
             run.status = "failed"
             run.error = str(error)
 

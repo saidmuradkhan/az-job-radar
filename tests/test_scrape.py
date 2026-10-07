@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from az_job_radar import scrape
 from az_job_radar.db import ScrapeRun, VacancyRow, get_engine
 from az_job_radar.models import Vacancy
 from az_job_radar.scrape import scrape_and_store
@@ -60,3 +61,21 @@ async def test_run_counts_cross_site_duplicates(engine):
     run = await scrape_and_store(engine, fetch)
 
     assert (run.found, run.new, run.duplicates) == (2, 2, 1)
+
+
+async def test_database_error_is_recorded(engine, monkeypatch):
+    def broken_mark_duplicates(session, since):
+        session.add(ScrapeRun(started_at=None))
+        session.flush()
+
+    monkeypatch.setattr(scrape, "mark_duplicates", broken_mark_duplicates)
+
+    async def fetch():
+        return [make_vacancy("1")]
+
+    run = await scrape_and_store(engine, fetch)
+
+    assert run.status == "failed"
+    with Session(engine) as session:
+        assert session.get(ScrapeRun, run.id).status == "failed"
+        assert session.scalar(select(func.count()).select_from(VacancyRow)) == 0
