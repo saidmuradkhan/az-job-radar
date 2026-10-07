@@ -2,7 +2,13 @@ from datetime import date
 
 import pytest
 
-from az_job_radar.duplicates import company_key, find_duplicates, same_job, similarity
+from az_job_radar.duplicates import (
+    company_key,
+    find_duplicates,
+    places_differ,
+    same_job,
+    similarity,
+)
 from az_job_radar.models import Vacancy
 
 
@@ -106,3 +112,37 @@ def test_no_duplicates():
         make_vacancy("ejob.az", "2", "Satış meneceri", "Acme"),
     ]
     assert find_duplicates(postings) == {}
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "differ"),
+    [
+        ("Kiçik satış mütəxəssisi - Şəki", "Kiçik satış mütəxəssisi - Naxçıvan", True),
+        ("Mütəxəssis (Xırdalan filialı)", "Mütəxəssis (Qəbələ filialı)", True),
+        ("Kassir Bakıda", "Kassir Gəncədə", True),
+        ("Qrafik dizayner (şəkil)", "Qrafik dizayner (video)", False),
+        ("Satış təmsilçisi", "Satış Təmsilçisi", False),
+    ],
+)
+def test_places_differ(a, b, differ):
+    assert places_differ(a, b) is differ
+
+
+def test_branch_ads_are_not_merged():
+    postings = [
+        make_vacancy("hellojob.az", "1", "Kiçik satış mütəxəssisi - Şəki", "ABB"),
+        make_vacancy("vakansiya.biz", "2", "Kiçik satış mütəxəssisi - Naxçıvan", "ABB"),
+    ]
+    assert find_duplicates(postings) == {}
+
+
+def test_a_group_never_holds_two_ads_from_one_site():
+    postings = [
+        make_vacancy("1is.az", "1", "Satış məsləhətçisi", "Kontakt Home"),
+        make_vacancy("hellojob.az", "2", "Satış məsləhətçisi", "Kontakt Home"),
+        make_vacancy("1is.az", "3", "Satış məsləhətçisi mebel", "Kontakt Home"),
+    ]
+
+    duplicates = find_duplicates(postings)
+
+    assert duplicates == {"hellojob.az:2": "1is.az:1"}

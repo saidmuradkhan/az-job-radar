@@ -15,6 +15,18 @@ LEGAL_FORMS = re.compile(
 TITLE_THRESHOLD = 0.85
 DESCRIPTION_THRESHOLD = 0.9
 MAX_DAYS_APART = 30
+# Banks post one ad per branch ("... - Şəki", "... (Xırdalan filialı)"); those are different jobs.
+PLACES = set(
+    """
+    baki sumqayit xirdalan abseron gence seki naxcivan lenkeran sirvan mingecevir yevlax
+    quba qusar qebele sabirabad salyan berde tovuz sabran xacmaz zaqatala samaxi goycay imisli
+    ismayilli masalli astara lerik agstafa qazax agcabadi agdam agdas beyleqan bilesuvar
+    calilabad fuzuli goranboy goygol haciqabul kurdemir neftcala oguz qax saatli samux siyezen
+    terter ucar zerdab xankendi susa kelbecer lacin zengilan qubadli cebrayil xizi
+    """.split()
+)
+PLACE_ENDINGS = ("", "da", "de", "dan", "den", "ya", "ye", "a", "e", "nin", "in", "un")
+
 
 
 class Posting(Protocol):
@@ -45,6 +57,13 @@ def similarity(a: str, b: str) -> float:
     return max(overlap, SequenceMatcher(None, a, b).ratio())
 
 
+def places_differ(a: str, b: str) -> bool:
+    """True when the titles name different towns, e.g. "... - Şəki" and "... - Naxçıvan"."""
+    words_a, words_b = set(normalize(a).split()), set(normalize(b).split())
+    different = words_a ^ words_b
+    return any(word.removesuffix(end) in PLACES for word in different for end in PLACE_ENDINGS)
+
+
 def close_in_time(a: Posting, b: Posting) -> bool:
     if a.published_on is None or b.published_on is None:
         return True
@@ -54,7 +73,7 @@ def close_in_time(a: Posting, b: Posting) -> bool:
 def same_job(a: Posting, b: Posting) -> bool:
     if a.source == b.source or not close_in_time(a, b):
         return False
-    if similarity(a.title, b.title) < TITLE_THRESHOLD:
+    if similarity(a.title, b.title) < TITLE_THRESHOLD or places_differ(a.title, b.title):
         return False
     if company_key(a.company) and company_key(a.company) == company_key(b.company):
         return True
@@ -102,6 +121,7 @@ def candidate_pairs(postings: list[Posting]):
 def find_duplicates(postings: list[Posting]) -> dict[str, str]:
     """Map the uid of every duplicate to the uid of the copy we keep."""
     parent = {p.uid: p.uid for p in postings}
+    sources = {p.uid: {p.source} for p in postings}
 
     def root(uid: str) -> str:
         while parent[uid] != uid:
@@ -109,8 +129,12 @@ def find_duplicates(postings: list[Posting]) -> dict[str, str]:
         return uid
 
     for a, b in candidate_pairs(postings):
-        if root(a.uid) != root(b.uid) and same_job(a, b):
-            parent[root(a.uid)] = root(b.uid)
+        root_a, root_b = root(a.uid), root(b.uid)
+        # A group holds at most one ad per site, so A=B and B=C can't pull in a different C.
+        if root_a == root_b or sources[root_a] & sources[root_b] or not same_job(a, b):
+            continue
+        parent[root_a] = root_b
+        sources[root_b] |= sources.pop(root_a)
 
     groups: dict[str, list[Posting]] = defaultdict(list)
     for posting in postings:
