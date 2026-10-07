@@ -1,10 +1,12 @@
 import os
+from dataclasses import asdict
 from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import JSON, DateTime, Engine, Numeric, String, Text, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
+from az_job_radar.analysis import analyze
 from az_job_radar.duplicates import find_duplicates
 from az_job_radar.models import Vacancy
 
@@ -154,3 +156,16 @@ def load_recent(engine: Engine, since: datetime) -> list[Vacancy]:
     with Session(engine) as session:
         rows = session.scalars(select(VacancyRow).where(VacancyRow.last_seen_at >= since))
         return [row_to_vacancy(row) for row in rows]
+
+
+def reanalyze(engine: Engine, since: datetime) -> int:
+    """Run the current analysis rules again on stored ads, e.g. after adding new skills."""
+    with Session(engine) as session:
+        rows = session.scalars(select(VacancyRow)).all()
+        for row in rows:
+            analysis = analyze(row.title, row.description)
+            for name, value in asdict(analysis).items():
+                setattr(row, name, list(value) if isinstance(value, tuple) else value)
+        mark_duplicates(session, since)
+        session.commit()
+        return len(rows)

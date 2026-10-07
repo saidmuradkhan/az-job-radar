@@ -36,6 +36,7 @@ Scrape all sources and save the results:
 ```bash
 az-job-radar scrape              # listing pages + full text of new ads
 az-job-radar scrape --no-details # listing pages only, much faster
+az-job-radar reanalyze           # rerun the analysis on stored ads after changing the rules
 ```
 
 By default the data goes to a local SQLite file, `az_job_radar.db`. Set `DATABASE_URL`

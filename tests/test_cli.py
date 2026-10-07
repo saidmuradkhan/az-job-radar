@@ -31,7 +31,7 @@ def test_scrape_saves_vacancies(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "collect", fake_collect)
     url = f"sqlite:///{tmp_path / 'radar.db'}"
 
-    assert cli.main(["scrape", "--database-url", url]) == 0
+    assert cli.main(["--database-url", url, "scrape"]) == 0
 
     assert "ok, 1 vacancies found, 1 new" in capsys.readouterr().out
     engine = create_engine(url)
@@ -45,7 +45,7 @@ def test_scrape_exits_with_error_when_the_run_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "collect", broken_collect)
     url = f"sqlite:///{tmp_path / 'radar.db'}"
 
-    assert cli.main(["scrape", "--database-url", url]) == 1
+    assert cli.main(["--database-url", url, "scrape"]) == 1
 
 
 def test_command_is_required():
@@ -58,7 +58,25 @@ def test_second_scrape_skips_known_detail_pages(tmp_path, monkeypatch):
     calls.clear()
     url = f"sqlite:///{tmp_path / 'radar.db'}"
 
-    cli.main(["scrape", "--database-url", url])
-    cli.main(["scrape", "--database-url", url, "--no-details"])
+    cli.main(["--database-url", url, "scrape"])
+    cli.main(["--database-url", url, "scrape", "--no-details"])
 
     assert calls == [(True, set()), (False, {"jobsearch.az:7"})]
+
+
+def test_reanalyze_updates_stored_vacancies(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "collect", fake_collect)
+    url = f"sqlite:///{tmp_path / 'radar.db'}"
+    cli.main(["--database-url", url, "scrape"])
+    engine = create_engine(url)
+    with Session(engine) as session:
+        row = session.get(VacancyRow, "jobsearch.az:7")
+        row.tags = []
+        session.commit()
+
+    assert cli.main(["--database-url", url, "reanalyze"]) == 0
+
+    assert "Analysed 1 vacancies again" in capsys.readouterr().out
+    with Session(engine) as session:
+        assert session.get(VacancyRow, "jobsearch.az:7").tags == ["go", "docker"]
+    engine.dispose()
