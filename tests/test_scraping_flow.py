@@ -3,7 +3,7 @@ from dataclasses import replace
 import httpx
 from bs4 import BeautifulSoup
 
-from az_job_radar.collect import run_scrapers
+from az_job_radar.collect import SCRAPERS, run_scrapers
 from az_job_radar.models import Vacancy
 from az_job_radar.robots import RobotsPolicy
 from az_job_radar.scrapers.base import USER_AGENT, BaseScraper, find_job_posting, html_to_text
@@ -95,7 +95,7 @@ class StaticScraper(BaseScraper):
     def parse_listing(self, text: str) -> list[Vacancy]:
         return []
 
-    async def scrape(self) -> list[Vacancy]:
+    async def scrape(self, details: bool = False, skip: set[str] | None = None) -> list[Vacancy]:
         if isinstance(self._vacancies, Exception):
             raise self._vacancies
         return self._vacancies
@@ -187,3 +187,9 @@ def test_html_to_text_and_job_posting():
     )
     assert find_job_posting(soup) == {"@type": "JobPosting", "title": "Mühasib"}
     assert find_job_posting(BeautifulSoup("<p>x</p>", "html.parser")) == {}
+
+
+def test_all_ten_sites_are_collected():
+    sources = {scraper.source for scraper in SCRAPERS}
+    assert len(sources) == 10
+    assert {"boss.az", "jobsearch.az", "hellojob.az", "jobs.glorri.az"} <= sources
