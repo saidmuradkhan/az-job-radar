@@ -12,6 +12,11 @@ CATEGORIES = {
     r"|system administrator|help ?desk|\bit\b|\b1c\b|\bweb\b|mobile|android|\bios\b|cyber"
     r"|kiber|ui/ux|ux/ui|şəbəkə|network|database|\bdba\b|texniki dəstək|technical support"
     r"|программист|разработчик|avtomatlaşdırıl",
+    "engineering": r"mühəndis|engineer|texnik|technician|mexanik|qa/qc|inspektor|inspector"
+    r"|keyfiyyət|quality|\bndt\b|\bhse\b|\behs\b|əməyin mühafizəsi|sətəm|əl/tmm|texnoloq"
+    r"|elektronika",
+    "education": r"müəllim|teacher|təlimçi|trainer|tərbiyəçi|tutor|ielts|repetitor|instructor"
+    r"|педагог|учител|преподават",
     "finance": r"mühasib|accountant|accounting|audit|maliyyə|financ|kassir|cashier|iqtisadçı"
     r"|economist|treasury|vergi|\btax\b|kredit|credit|investment|investisiya|\brisk|girov"
     r"|dələduzluq|fraud|xərc|бухгалтер|финанс",
@@ -21,8 +26,6 @@ CATEGORIES = {
     "design": r"dizayn|design|qrafik|graphic|videoqraf|fotoqraf|video montaj|дизайн",
     "legal": r"hüquq|lawyer|legal|vəkil|compliance|юрист",
     "healthcare": r"həkim|doctor|tibb|nurse|əczaçı|pharmac|stomatoloq|dentist|laborant|врач",
-    "education": r"müəllim|teacher|təlimçi|trainer|tərbiyəçi|tutor|ielts|repetitor|instructor"
-    r"|педагог|учител|преподават",
     "customer_service": r"operator|call ?cent|çağrı mərkəzi|müştəri xidm"
     r"|customer (?:service|support)",
     "hospitality": r"ofisiant|waiter|aşpaz|\bchef\b|\bcook\b|barmen|barista|\botel|hotel"
@@ -31,9 +34,6 @@ CATEGORIES = {
     r"|təchizat|satınalma|procurement|purchas|qəbulçu|gəmi",
     "construction": r"inşaat|construction|usta|santexnik|qaynaqçı|welder|elektrik|electrician"
     r"|smeta|memar|architect|topoqraf|çilingər|site supervisor",
-    "engineering": r"mühəndis|engineer|texnik|technician|mexanik|qa/qc|inspektor|inspector"
-    r"|keyfiyyət|quality|\bndt\b|\bhse\b|\behs\b|əməyin mühafizəsi|sətəm|əl/tmm|texnoloq"
-    r"|elektronika",
     "services": r"xadimə|təmizlik|cleaner|mühafizə|security guard|inkassator|dərzi|bərbər"
     r"|təhlükəsizli|kamera|fəhlə|universal işçi|könüllü|volunteer",
     "sales": r"satış|sales|satıcı|seller|merchandiser|merçendayzer|supervayzer|mağaza|store"
@@ -247,6 +247,16 @@ def extract_tags(text: str) -> tuple[str, ...]:
     return all_matches(SKILL_PATTERNS, fold(text))
 
 
+def category_of(title: str) -> str:
+    """Decide on the main title first: "Satınalma (İnvestisiya layihələri)" is procurement."""
+    main_title = re.sub(r"\(.*?\)", " ", title)
+    return (
+        first_match(CATEGORY_PATTERNS, main_title)
+        or first_match(CATEGORY_PATTERNS, title)
+        or "other"
+    )
+
+
 def experience_years(text: str) -> int | None:
     if NO_EXPERIENCE.search(text):
         return 0
@@ -259,7 +269,7 @@ def analyze(title: str, description: str = "") -> Analysis:
     title = fold(title)
     full_text = f"{title}\n{fold(description)}"
     return Analysis(
-        category=first_match(CATEGORY_PATTERNS, title) or "other",
+        category=category_of(title),
         tags=all_matches(SKILL_PATTERNS, full_text),
         languages=all_matches(LANGUAGE_PATTERNS, fold(description)),
         experience_years=experience_years(full_text),

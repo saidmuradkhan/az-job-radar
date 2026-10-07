@@ -53,6 +53,9 @@ We offer a hybrid schedule.
         ("Salatçı", "hospitality"),
         ("Mal qəbulçusu", "logistics"),
         ("Şəki filialı üzrə Universal işçi", "services"),
+        ("Xərclərə nəzarət üzrə aparıcı mühəndis", "engineering"),
+        ("Milli Mühasib Sertifikatı üzrə təlimçi", "education"),
+        ("Satınalma üzrə mütəxəssis (İnvestisiya Layihələri Üzrə)", "logistics"),
         ("Gözəllik salonu üçün kosmetoloq", "other"),
     ],
 )
