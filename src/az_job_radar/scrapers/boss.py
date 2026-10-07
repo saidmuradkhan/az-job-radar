@@ -1,69 +1,65 @@
-import re
+import json
 from datetime import date
-from urllib.parse import urljoin
-
-import httpx
-from bs4 import BeautifulSoup, Tag
+from decimal import Decimal
 
 from az_job_radar.models import Vacancy
-from az_job_radar.parsing import parse_currency, parse_listing_date, parse_salary
-from az_job_radar.robots import RobotsPolicy
-from az_job_radar.scrapers.base import BaseScraper
+from az_job_radar.scrapers.base import BaseScraper, flight_data, flight_texts, html_to_text
 
 BASE_URL = "https://boss.az"
-IT_CATEGORY_IDS = (66, 67, 68, 69, 70, 71, 72, 159)
-VACANCY_ID = re.compile(r"/vacancies/(\d+)")
+SEARCH_URL = f"{BASE_URL}/search/vacancies"
+# Top-level categories (IT, sales, finance, ...). Each page shows its newest 24 vacancies.
+CATEGORY_IDS = (36, 37, 38, 40, 42, 43, 44, 46)
+TEXT_FIELDS = ("description", "responsibilities", "requirements")
 
 
-def field_text(card: Tag, name: str) -> str | None:
-    element = card.select_one(f'[data-cy="{name}"]')
-    if element is None:
-        return None
-    return element.get_text(" ", strip=True) or None
+def preloaded_vacancies(text: str) -> list[dict]:
+    data = flight_data(text)
+    key = '"preloadedAds":'
+    start = data.find(key)
+    if start == -1:
+        return []
+    ads, _ = json.JSONDecoder().raw_decode(data, start + len(key))
+    nodes = (ads.get("vacancies") or {}).get("nodes") or []
+
+    texts = flight_texts(data)
+    for node in nodes:
+        for field in TEXT_FIELDS:
+            if isinstance(node.get(field), str) and node[field].startswith("$"):
+                node[field] = texts.get(node[field], "")
+    return nodes
+
+
+def amount(value) -> Decimal | None:
+    return Decimal(str(value)) if value else None
 
 
 class BossScraper(BaseScraper):
     source = "boss.az"
-    start_urls = tuple(
-        f"{BASE_URL}/search/vacancies?categoryIds={category}" for category in IT_CATEGORY_IDS
-    )
-
-    def __init__(
-        self,
-        client: httpx.AsyncClient | None = None,
-        robots: RobotsPolicy | None = None,
-        today: date | None = None,
-    ) -> None:
-        super().__init__(client, robots)
-        self.today = today
+    start_urls = (SEARCH_URL, *(f"{SEARCH_URL}?categoryIds={id}" for id in CATEGORY_IDS))
 
     def parse_listing(self, text: str) -> list[Vacancy]:
-        soup = BeautifulSoup(text, "html.parser")
-        today = self.today or date.today()
         vacancies = []
-
-        for card in soup.select('[data-cy="ad-card"]'):
-            link = card.find_parent("a", href=True)
-            match = VACANCY_ID.search(link["href"]) if link else None
-            title = field_text(card, "ad-card-subtitle")
-            if not match or not title:
+        for node in preloaded_vacancies(text):
+            title = (node.get("positionName") or "").strip()
+            if not title or not node.get("id"):
                 continue
 
-            salary_text = field_text(card, "ad-card-salary")
-            salary_min, salary_max = parse_salary(salary_text)
+            posted = node.get("createdAt") or node.get("bumpedAt")
+            description = "\n".join(
+                html_to_text(node[field]) for field in TEXT_FIELDS if node.get(field)
+            )
             vacancies.append(
                 Vacancy(
                     source=self.source,
-                    external_id=match.group(1),
+                    external_id=node["id"],
                     title=title,
-                    company=field_text(card, "ad-card-title") or "",
-                    url=urljoin(BASE_URL, link["href"]),
-                    location=field_text(card, "ad-card-location"),
-                    published_on=parse_listing_date(field_text(card, "ad-card-date"), today),
-                    salary_min=salary_min,
-                    salary_max=salary_max,
-                    currency=parse_currency(salary_text),
+                    company=(node.get("name") or "").strip(),
+                    url=f"{BASE_URL}/vacancies/{node['id']}",
+                    location=node.get("location"),
+                    published_on=date.fromisoformat(posted[:10]) if posted else None,
+                    salary_min=amount(node.get("salaryFrom")),
+                    salary_max=amount(node.get("salaryTo")),
+                    description=description,
                 )
             )
-
         return vacancies
