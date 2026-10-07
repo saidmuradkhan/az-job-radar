@@ -2,7 +2,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import func, inspect, select
+from sqlalchemy import create_engine, func, inspect, select
 from sqlalchemy.orm import Session
 
 from az_job_radar.db import (
@@ -140,3 +140,8 @@ def test_mark_duplicates_links_copies_from_other_sites(engine):
 
     assert found == 1
     assert rows == {"boss.az:1": "hellojob.az:2", "hellojob.az:2": None, "boss.az:3": None}
+
+
+def test_postgres_driver_is_installed():
+    engine = create_engine("postgresql+psycopg://user:secret@localhost/radar")
+    assert engine.dialect.driver == "psycopg"

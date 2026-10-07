@@ -67,7 +67,13 @@ def database_url() -> str:
 
 
 def get_engine(url: str | None = None) -> Engine:
-    engine = create_engine(url or database_url())
+    url = url or database_url()
+    options = {}
+    if url.startswith("postgresql"):
+        # Neon's connection pooler can't keep prepared statements between requests,
+        # and serverless connections may be closed while idle.
+        options = {"connect_args": {"prepare_threshold": None}, "pool_pre_ping": True}
+    engine = create_engine(url, **options)
     Base.metadata.create_all(engine)
     return engine
 
