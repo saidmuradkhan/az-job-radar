@@ -77,7 +77,7 @@ def checkbox_list(name, counts, selected, labels) -> str:
 
 
 def render_filters(catalog: "Catalog", filters: Filters, found: list[Vacancy]) -> str:
-    counts = facets(found)
+    counts = catalog.facets(found)
     # Count categories as if none was picked, so the other options stay visible.
     any_category = catalog.search(replace(filters, category=None))
     category_counts = facets(any_category)["category"]

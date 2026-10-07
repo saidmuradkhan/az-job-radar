@@ -1,7 +1,7 @@
 import asyncio
 import os
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
@@ -17,6 +17,7 @@ from az_job_radar.dashboard import render_dashboard
 from az_job_radar.db import get_engine, load_recent
 from az_job_radar.duplicates import find_duplicates
 from az_job_radar.models import Vacancy
+from az_job_radar.phrases import employer_count, phrase_counts
 from az_job_radar.search import Filters, facets, search
 
 Fetch = Callable[[], Awaitable[list[Vacancy]]]
@@ -34,6 +35,8 @@ class Catalog:
 
     vacancies: list[Vacancy] = field(default_factory=list)
     copies: dict[str, list[Vacancy]] = field(default_factory=dict)
+    phrase_background: Counter = field(default_factory=Counter)
+    employers: int = 0
 
     @classmethod
     def build(cls, vacancies: list[Vacancy]) -> "Catalog":
@@ -43,13 +46,26 @@ class Catalog:
             if vacancy.uid in duplicates:
                 copies[duplicates[vacancy.uid]].append(vacancy)
         kept = [v for v in vacancies if v.uid not in duplicates]
-        return cls(vacancies=kept, copies=dict(copies))
+        return cls(
+            vacancies=kept,
+            copies=dict(copies),
+            phrase_background=phrase_counts(kept),
+            employers=employer_count(kept),
+        )
 
     def get(self, uid: str) -> Vacancy | None:
         return next((v for v in self.vacancies if v.uid == uid), None)
 
     def sources(self, vacancy: Vacancy) -> set[str]:
         return {vacancy.source, *(copy.source for copy in self.copies.get(vacancy.uid, []))}
+
+    def facets(self, found: list[Vacancy]) -> dict[str, list[tuple[str, int]]]:
+        # Compare with all ads only for a narrower group, otherwise everything looks ordinary.
+        if len(found) * 2 > len(self.vacancies):
+            return facets(found)
+        return facets(
+            found, background=self.phrase_background, background_size=self.employers
+        )
 
     def search(self, filters: Filters) -> list[Vacancy]:
         found = search(self.vacancies, replace(filters, source=None))
@@ -171,7 +187,7 @@ def create_app(
                 vacancy_to_dict(v, catalog.copies.get(v.uid))
                 for v in found[start : start + per_page]
             ],
-            "facets": facets(found),
+            "facets": catalog.facets(found),
         }
 
     @app.get("/vacancies/{uid:path}")

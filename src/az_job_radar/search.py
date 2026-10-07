@@ -68,7 +68,12 @@ def search(vacancies: list[Vacancy], filters: Filters) -> list[Vacancy]:
     return sorted(found, key=lambda v: v.published_on or date.min, reverse=True)
 
 
-def facets(vacancies: list[Vacancy], top: int = 25) -> dict[str, list[tuple[str, int]]]:
+def facets(
+    vacancies: list[Vacancy],
+    top: int = 25,
+    background: Counter | None = None,
+    background_size: int = 0,
+) -> dict[str, list[tuple[str, int]]]:
     """Count how often each filter value appears, most common first."""
     counters: dict[str, Counter] = {
         name: Counter()
@@ -95,5 +100,7 @@ def facets(vacancies: list[Vacancy], top: int = 25) -> dict[str, list[tuple[str,
             counters["city"][vacancy.location] += 1
     result = {name: counter.most_common(top) for name, counter in counters.items()}
     # The newest few hundred ads are enough to see what keeps repeating.
-    result["phrases"] = frequent_phrases(vacancies[:PHRASE_SAMPLE], top=top)
+    result["phrases"] = frequent_phrases(
+        vacancies[:PHRASE_SAMPLE], top=top, background=background, background_size=background_size
+    )
     return result
