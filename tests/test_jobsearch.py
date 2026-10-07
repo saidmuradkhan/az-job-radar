@@ -47,3 +47,16 @@ def test_next_page_url(read_fixture):
     next_url = scraper.next_page_url(read_fixture("jobsearch_page.json"), "")
     assert "page=2" in next_url
     assert scraper.next_page_url(json.dumps({"items": []}), "") is None
+
+
+def test_detail_adds_the_full_text(read_fixture):
+    scraper = JobSearchScraper()
+    vacancy = scraper.parse_listing(read_fixture("jobsearch_page.json"))[0]
+
+    assert scraper.detail_url(vacancy).startswith(
+        "https://jobsearch.az/api-az/vacancies-az/knight-academy-"
+    )
+    detailed = scraper.parse_detail(read_fixture("jobsearch_detail.json"), vacancy)
+    assert "Требования к кандидату" in detailed.description
+    assert "<p>" not in detailed.description
+    assert detailed.title == vacancy.title

@@ -1,19 +1,21 @@
 import json
+from dataclasses import replace
 from datetime import date
 
 from az_job_radar.models import Vacancy
 from az_job_radar.parsing import parse_currency, parse_salary
-from az_job_radar.scrapers.base import BaseScraper
+from az_job_radar.scrapers.base import BaseScraper, html_to_text
 
 API_URL = "https://jobsearch.az/api-az/vacancies-az?hl=az"
 VACANCY_URL = "https://jobsearch.az/vacancies/{slug}"
+DETAIL_URL = "https://jobsearch.az/api-az/vacancies-az/{slug}?hl=az"
 
 
 class JobSearchScraper(BaseScraper):
     source = "jobsearch.az"
     start_urls = (API_URL,)
     request_headers = {"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"}
-    max_pages = 3
+    max_pages = 5
 
     def parse_listing(self, text: str) -> list[Vacancy]:
         vacancies = []
@@ -43,3 +45,11 @@ class JobSearchScraper(BaseScraper):
 
     def next_page_url(self, text: str, current_url: str) -> str | None:
         return json.loads(text).get("next")
+
+    def detail_url(self, vacancy: Vacancy) -> str | None:
+        slug = vacancy.url.rsplit("/", 1)[-1]
+        return DETAIL_URL.format(slug=slug)
+
+    def parse_detail(self, text: str, vacancy: Vacancy) -> Vacancy:
+        item = json.loads(text)
+        return replace(vacancy, description=html_to_text(item.get("text") or ""))
