@@ -2,7 +2,6 @@ import json
 import re
 from dataclasses import replace
 from datetime import date
-from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -10,7 +9,8 @@ from az_job_radar.models import Vacancy
 from az_job_radar.scrapers.base import BaseScraper, flight_data
 
 BASE_URL = "https://jobs.glorri.az"
-LISTING_URL = BASE_URL + "/?page={page}"
+# The server ignores ?page=, so only the newest vacancies are on the first page.
+LISTING_URL = BASE_URL + "/?sort=-date"
 VACANCY_URL = BASE_URL + "/vacancies/{company}/{slug}"
 
 
@@ -29,15 +29,9 @@ def vacancy_entities(text: str) -> list[dict]:
     return best.get("entities", [])
 
 
-def current_page(url: str) -> int:
-    pages = parse_qs(urlparse(url).query).get("page", ["1"])
-    return int(pages[0]) if pages[0].isdigit() else 1
-
-
 class GlorriScraper(BaseScraper):
     source = "jobs.glorri.az"
-    start_urls = (LISTING_URL.format(page=1),)
-    max_pages = 5
+    start_urls = (LISTING_URL,)
 
     def parse_listing(self, text: str) -> list[Vacancy]:
         vacancies = []
@@ -62,12 +56,6 @@ class GlorriScraper(BaseScraper):
                 )
             )
         return vacancies
-
-    def next_page_url(self, text: str, current_url: str) -> str | None:
-        page = current_page(current_url)
-        if page >= self.max_pages or not vacancy_entities(text):
-            return None
-        return LISTING_URL.format(page=page + 1)
 
     def detail_url(self, vacancy: Vacancy) -> str | None:
         return vacancy.url

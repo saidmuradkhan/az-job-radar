@@ -53,14 +53,9 @@ def test_skips_entities_without_title_or_slug():
     assert vacancies[0].published_on is None
 
 
-def test_next_page_url(read_fixture):
-    scraper = GlorriScraper()
-    listing = read_fixture("glorri_listing.html")
-    assert scraper.next_page_url(listing, "https://jobs.glorri.az/?page=1") == (
-        "https://jobs.glorri.az/?page=2"
-    )
-    assert scraper.next_page_url(listing, "https://jobs.glorri.az/?page=5") is None
-    assert scraper.next_page_url("<html></html>", "https://jobs.glorri.az/?page=2") is None
+def test_reads_only_the_newest_page():
+    assert GlorriScraper.start_urls == ("https://jobs.glorri.az/?sort=-date",)
+    assert GlorriScraper().next_page_url("<html></html>", GlorriScraper.start_urls[0]) is None
 
 
 def test_parse_detail_adds_description(read_fixture):
