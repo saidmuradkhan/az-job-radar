@@ -44,6 +44,15 @@ We offer a hybrid schedule.
         ("Layihə assistenti", "admin"),
         ("General English Instructor", "education"),
         ("Videoqraf", "design"),
+        ("Rəqəmsal dələduzluq əməliyyatlarının monitorinqi üzrə mütəxəssis", "finance"),
+        ("Педагог Английского языка", "education"),
+        ("Руководитель отдела маркетинга", "marketing"),
+        ("Merçendayzer", "sales"),
+        ("Kargüzar", "admin"),
+        ("Növbə rəisi", "management"),
+        ("Salatçı", "hospitality"),
+        ("Mal qəbulçusu", "logistics"),
+        ("Şəki filialı üzrə Universal işçi", "services"),
         ("Gözəllik salonu üçün kosmetoloq", "other"),
     ],
 )
@@ -144,3 +153,20 @@ def test_extract_tags(title, expected):
 def test_skill_names_are_unique_across_groups():
     names = [skill for group in SKILL_GROUPS.values() for skill in group]
     assert len(names) == len(set(names))
+
+
+@pytest.mark.parametrize(
+    ("description", "has_payroll"),
+    [
+        ("Əmək haqqının hesablanması və uçotu", True),
+        ("Payroll experience", True),
+        ("Əmək haqqı: 1500 AZN", False),
+        ("Əmək haqqı razılaşma yolu ilə", False),
+    ],
+)
+def test_payroll_is_a_skill_not_a_salary_line(description, has_payroll):
+    assert ("payroll" in analyze("Mühasib", description).tags) is has_payroll
+
+
+def test_ai_skill():
+    assert "ai" in analyze("SMM", "Süni intellekt alətləri ilə işləmək").tags

@@ -10,30 +10,38 @@ CATEGORIES = {
     "it": r"developer|proqramçı|proqramist|programmer|software|front-?end|back-?end|full-?stack"
     r"|devops|\bqa\b(?!/qc)|tester|data (?:analyst|scientist|engineer)|sistem administrator"
     r"|system administrator|help ?desk|\bit\b|\b1c\b|\bweb\b|mobile|android|\bios\b|cyber"
-    r"|kiber|ui/ux|ux/ui|şəbəkə|network|database|\bdba\b|texniki dəstək|technical support",
+    r"|kiber|ui/ux|ux/ui|şəbəkə|network|database|\bdba\b|texniki dəstək|technical support"
+    r"|программист|разработчик|avtomatlaşdırıl",
     "finance": r"mühasib|accountant|accounting|audit|maliyyə|financ|kassir|cashier|iqtisadçı"
-    r"|economist|treasury|vergi|\btax\b|kredit|credit|investment|investisiya",
-    "hr": r"\bhr\b|insan resurs|kadr|recruit|rekrut|işə qəbul|talent",
-    "marketing": r"marketinq|marketing|\bsmm\b|\bseo\b|kontent|content|brand|\bpr\b|reklam",
-    "design": r"dizayn|design|qrafik|graphic|videoqraf|fotoqraf|video montaj",
-    "legal": r"hüquq|lawyer|legal|vəkil|compliance",
-    "healthcare": r"həkim|doctor|tibb|nurse|əczaçı|pharmac|stomatoloq|dentist|laborant",
-    "education": r"müəllim|teacher|təlimçi|trainer|tərbiyəçi|tutor|ielts|repetitor|instructor",
+    r"|economist|treasury|vergi|\btax\b|kredit|credit|investment|investisiya|\brisk|girov"
+    r"|dələduzluq|fraud|xərc|бухгалтер|финанс",
+    "hr": r"\bhr\b|insan resurs|kadr|recruit|rekrut|işə qəbul|talent|succession|кадр",
+    "marketing": r"marketinq|marketing|\bsmm\b|\bseo\b|kontent|content|brand|\bpr\b|reklam"
+    r"|kopirayter|copywrit|маркетинг",
+    "design": r"dizayn|design|qrafik|graphic|videoqraf|fotoqraf|video montaj|дизайн",
+    "legal": r"hüquq|lawyer|legal|vəkil|compliance|юрист",
+    "healthcare": r"həkim|doctor|tibb|nurse|əczaçı|pharmac|stomatoloq|dentist|laborant|врач",
+    "education": r"müəllim|teacher|təlimçi|trainer|tərbiyəçi|tutor|ielts|repetitor|instructor"
+    r"|педагог|учител|преподават",
     "customer_service": r"operator|call ?cent|çağrı mərkəzi|müştəri xidm"
     r"|customer (?:service|support)",
     "hospitality": r"ofisiant|waiter|aşpaz|\bchef\b|\bcook\b|barmen|barista|\botel|hotel"
-    r"|resepş|reception|turizm|tourism|reservation",
+    r"|resepş|reception|turizm|tourism|reservation|salatçı|hostess|çay xidməti|tea lady|visa",
     "logistics": r"logist|sürücü|driver|anbar|warehouse|kuryer|courier|ekspeditor|supply chain"
-    r"|təchizat|satınalma|procurement|purchas",
+    r"|təchizat|satınalma|procurement|purchas|qəbulçu|gəmi",
     "construction": r"inşaat|construction|usta|santexnik|qaynaqçı|welder|elektrik|electrician"
-    r"|smeta|memar|architect|topoqraf|çilingər",
+    r"|smeta|memar|architect|topoqraf|çilingər|site supervisor",
     "engineering": r"mühəndis|engineer|texnik|technician|mexanik|qa/qc|inspektor|inspector"
-    r"|keyfiyyət|quality|\bndt\b|\bhse\b|\behs\b|əməyin mühafizəsi|sətəm|əl/tmm",
-    "services": r"xadimə|təmizlik|cleaner|mühafizə|security guard|inkassator|dərzi|bərbər",
-    "sales": r"satış|sales|satıcı|seller|merchandiser|mağaza|store|business development",
+    r"|keyfiyyət|quality|\bndt\b|\bhse\b|\behs\b|əməyin mühafizəsi|sətəm|əl/tmm|texnoloq"
+    r"|elektronika",
+    "services": r"xadimə|təmizlik|cleaner|mühafizə|security guard|inkassator|dərzi|bərbər"
+    r"|təhlükəsizli|kamera|fəhlə|universal işçi|könüllü|volunteer",
+    "sales": r"satış|sales|satıcı|seller|merchandiser|merçendayzer|supervayzer|mağaza|store"
+    r"|business development|rieltor|realtor|продаж",
     "admin": r"ofis|office|katib|secretary|assistant|assistent|köməkçi|administrator"
-    r"|koordinator|coordinator|document control",
-    "management": r"direktor|director|rəhbər|head of|manager|menecer|müdir|team lead",
+    r"|koordinator|coordinator|document control|kargüzar|qeydiyyatçı",
+    "management": r"direktor|director|rəhbər|head of|manager|menecer|müdir|team lead|rəisi?"
+    r"|руководител|strategy",
 }
 
 CATEGORY_LABELS = {
@@ -106,7 +114,7 @@ SKILL_GROUPS = {
     "Data & BI": {
         "power bi": r"\bpower ?bi\b",
         "tableau": r"\btableau\b",
-        "machine learning": r"machine learning|\bml\b|süni intellekt|\bai\b",
+        "ai": r"machine learning|\bml\b|süni intellekt|\bai\b|\bgenai\b|\bllm",
         "etl": r"\betl\b",
     },
     "Accounting & finance": {
@@ -117,7 +125,7 @@ SKILL_GROUPS = {
         "audit": r"\baudit",
         "acca": r"\bacca\b",
         "sap": r"\bsap\b",
-        "payroll": r"əmək haqq|payroll",
+        "payroll": r"əmək haqq\w* hesablan|payroll|əmək haqqı cədvəl",
     },
     "Marketing": {
         "smm": r"\bsmm\b",
