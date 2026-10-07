@@ -4,7 +4,8 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
-from az_job_radar.app import create_app, format_salary
+from az_job_radar.app import create_app
+from az_job_radar.dashboard import format_salary
 from az_job_radar.gate import COOKIE_NAME, PreviewGate
 from az_job_radar.models import Vacancy
 
@@ -31,6 +32,19 @@ VACANCIES = [
         published_on=date(2026, 10, 3),
     ),
     Vacancy(source="jobsearch.az", external_id="3", title="Go Dev", company="Gamma", url="u"),
+    Vacancy(
+        source="hellojob.az",
+        external_id="9",
+        title="Python developer",
+        company="ACME MMC",
+        url="https://hellojob.az/vacancies/9",
+        published_on=date(2026, 9, 30),
+        category="it",
+        tags=("python", "django"),
+        languages=("english",),
+        experience_years=2,
+        description="Python, Django, 2 il təcrübə, ingilis dili",
+    ),
 ]
 
 
@@ -74,13 +88,56 @@ def test_vacancies_are_sorted_newest_first(open_client: TestClient):
     body = open_client.get("/vacancies").json()
     assert body["count"] == 3
     uids = [item["uid"] for item in body["items"]]
-    assert uids == ["jobsearch.az:2", "boss.az:1", "jobsearch.az:3"]
-    assert body["items"][1]["salary_min"] == 1500.0
+    assert uids == ["jobsearch.az:2", "hellojob.az:9", "jobsearch.az:3"]
+
+
+def test_cross_site_copies_are_merged(open_client: TestClient):
+    item = open_client.get("/vacancies").json()["items"][1]
+    assert item["uid"] == "hellojob.az:9"
+    assert item["tags"] == ["python", "django"]
+    assert item["also_on"] == [{"source": "boss.az", "url": "https://boss.az/vacancies/1"}]
+
+
+def test_vacancies_filters(open_client: TestClient):
+    def uids(**params):
+        body = open_client.get("/vacancies", params=params).json()
+        return [item["uid"] for item in body["items"]]
+
+    assert uids(category="it") == ["hellojob.az:9"]
+    assert uids(tag=["python", "django"]) == ["hellojob.az:9"]
+    assert uids(tag=["python", "java"]) == []
+    assert uids(language="english", max_experience=3) == ["hellojob.az:9"]
+    assert uids(max_experience=1) == ["jobsearch.az:2", "jobsearch.az:3"]
+    assert uids(q="react") == ["jobsearch.az:2"]
+
+
+def test_vacancies_include_facets(open_client: TestClient):
+    body = open_client.get("/vacancies", params={"category": "it"}).json()
+    assert body["facets"]["tags"] == [["python", 1], ["django", 1]]
+
+
+def test_vacancies_pagination(open_client: TestClient):
+    body = open_client.get("/vacancies", params={"per_page": 2, "page": 2}).json()
+    assert body["count"] == 3
+    assert [item["uid"] for item in body["items"]] == ["jobsearch.az:3"]
+
+
+def test_bad_filter_value_is_rejected(open_client: TestClient):
+    assert open_client.get("/vacancies", params={"max_experience": -1}).status_code == 422
+
+
+def test_vacancy_detail(open_client: TestClient):
+    body = open_client.get("/vacancies/hellojob.az:9").json()
+    assert body["description"].startswith("Python, Django")
+    assert body["also_on"][0]["source"] == "boss.az"
+    assert open_client.get("/vacancies/nope:1").status_code == 404
 
 
 def test_vacancies_filter_by_source(open_client: TestClient):
     body = open_client.get("/vacancies", params={"source": "boss.az"}).json()
-    assert [item["uid"] for item in body["items"]] == ["boss.az:1"]
+    assert [item["uid"] for item in body["items"]] == ["hellojob.az:9"]
+    body = open_client.get("/vacancies", params={"source": "jobsearch.az"}).json()
+    assert [item["uid"] for item in body["items"]] == ["jobsearch.az:2", "jobsearch.az:3"]
 
 
 def test_results_are_cached(open_client: TestClient, fetch: FakeFetch):
@@ -91,9 +148,23 @@ def test_results_are_cached(open_client: TestClient, fetch: FakeFetch):
 
 def test_dashboard_escapes_html(open_client: TestClient):
     page = open_client.get("/").text
-    assert "3 vacancies" in page
+    assert "3 vacancies · 1 duplicate posts merged" in page
     assert "&lt;b&gt;React&lt;/b&gt; Engineer" in page
     assert "<b>React</b>" not in page
+
+
+def test_dashboard_filters(open_client: TestClient):
+    page = open_client.get("/", params={"category": "it", "tag": "python"}).text
+    assert "1 vacancies" in page
+    assert '<option value="it" selected>IT (1)</option>' in page
+    assert 'name="tag" value="python" checked' in page
+    assert "Also on" in page and "boss.az" in page
+    assert "React" not in page
+
+
+def test_dashboard_with_no_results(open_client: TestClient):
+    page = open_client.get("/", params={"q": "nothing-like-this"}).text
+    assert "No vacancies match these filters." in page
 
 
 def test_format_salary():
