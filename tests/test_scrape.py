@@ -7,9 +7,9 @@ from az_job_radar.models import Vacancy
 from az_job_radar.scrape import scrape_and_store
 
 
-def make_vacancy(external_id: str) -> Vacancy:
+def make_vacancy(external_id: str, source: str = "boss.az") -> Vacancy:
     return Vacancy(
-        source="boss.az",
+        source=source,
         external_id=external_id,
         title="Python Developer",
         company="Acme",
@@ -51,3 +51,12 @@ async def test_failed_run_is_recorded_with_the_error(engine):
         saved = session.get(ScrapeRun, run.id)
         assert saved.status == "failed"
         assert session.scalar(select(func.count()).select_from(VacancyRow)) == 0
+
+
+async def test_run_counts_cross_site_duplicates(engine):
+    async def fetch():
+        return [make_vacancy("1"), make_vacancy("1", source="hellojob.az")]
+
+    run = await scrape_and_store(engine, fetch)
+
+    assert (run.found, run.new, run.duplicates) == (2, 2, 1)

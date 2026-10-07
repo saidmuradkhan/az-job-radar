@@ -31,5 +31,8 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         engine.dispose()
 
-    print(f"Run #{run.id}: {run.status}, {run.found} vacancies found, {run.new} new")
+    print(
+        f"Run #{run.id}: {run.status}, {run.found} vacancies found, {run.new} new, "
+        f"{run.duplicates} cross-site duplicates"
+    )
     return 0 if run.status == "ok" else 1
