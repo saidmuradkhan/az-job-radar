@@ -1,8 +1,10 @@
 import asyncio
+import json
 import logging
 from abc import ABC, abstractmethod
 
 import httpx
+from bs4 import BeautifulSoup
 
 from az_job_radar.models import Vacancy
 from az_job_radar.robots import RobotsPolicy
@@ -20,12 +22,31 @@ def build_client() -> httpx.AsyncClient:
     )
 
 
+def html_to_text(html: str) -> str:
+    """Turn a description written in HTML into plain text, one block per line."""
+    return BeautifulSoup(html, "html.parser").get_text("\n", strip=True)
+
+
+def find_job_posting(soup: BeautifulSoup) -> dict:
+    """Return the schema.org JobPosting that many job sites embed for search engines."""
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+        except json.JSONDecodeError:
+            continue
+        for item in data if isinstance(data, list) else [data]:
+            if isinstance(item, dict) and item.get("@type") == "JobPosting":
+                return item
+    return {}
+
+
 class BaseScraper(ABC):
     source: str
     start_urls: tuple[str, ...] = ()
     request_headers: dict[str, str] = {}
     delay_seconds: float = 1.0
     max_pages: int = 1
+    max_details: int = 150
 
     def __init__(
         self,
@@ -52,7 +73,31 @@ class BaseScraper(ABC):
     def next_page_url(self, text: str, current_url: str) -> str | None:
         return None
 
-    async def scrape(self) -> list[Vacancy]:
+    def detail_url(self, vacancy: Vacancy) -> str | None:
+        """Where the full description lives. None means the listing already has everything."""
+        return None
+
+    def parse_detail(self, text: str, vacancy: Vacancy) -> Vacancy:
+        return vacancy
+
+    async def add_details(self, vacancies: list[Vacancy], skip: set[str]) -> list[Vacancy]:
+        result = []
+        fetched = 0
+        for vacancy in vacancies:
+            url = self.detail_url(vacancy)
+            if not url or vacancy.uid in skip or fetched >= self.max_details:
+                result.append(vacancy)
+                continue
+            fetched += 1
+            try:
+                text = await self.fetch(url)
+            except httpx.HTTPError as error:
+                logger.warning("%s: detail page %s failed: %s", self.source, url, error)
+                text = None
+            result.append(self.parse_detail(text, vacancy) if text else vacancy)
+        return result
+
+    async def scrape(self, details: bool = False, skip: set[str] | None = None) -> list[Vacancy]:
         vacancies: list[Vacancy] = []
         for start_url in self.start_urls:
             url: str | None = start_url
@@ -64,6 +109,8 @@ class BaseScraper(ABC):
                 vacancies.extend(self.parse_listing(text))
                 url = self.next_page_url(text, url)
                 pages += 1
+        if details:
+            vacancies = await self.add_details(vacancies, skip or set())
         return vacancies
 
     async def close(self) -> None:

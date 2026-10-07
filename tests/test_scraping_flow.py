@@ -1,9 +1,12 @@
+from dataclasses import replace
+
 import httpx
+from bs4 import BeautifulSoup
 
 from az_job_radar.collect import run_scrapers
 from az_job_radar.models import Vacancy
 from az_job_radar.robots import RobotsPolicy
-from az_job_radar.scrapers.base import USER_AGENT, BaseScraper
+from az_job_radar.scrapers.base import USER_AGENT, BaseScraper, find_job_posting, html_to_text
 
 ROBOTS = "User-agent: *\nDisallow: /private\n"
 
@@ -114,3 +117,73 @@ async def test_one_failing_source_does_not_stop_the_others():
     vacancies = await run_scrapers([broken, working])
 
     assert [v.uid for v in vacancies] == ["ok:1"]
+
+
+class DetailScraper(FakeScraper):
+    max_pages = 1
+
+    def detail_url(self, vacancy: Vacancy) -> str | None:
+        return f"https://example.com/detail/{vacancy.external_id}"
+
+    def parse_detail(self, text: str, vacancy: Vacancy) -> Vacancy:
+        return replace(vacancy, description=text)
+
+
+def detail_client() -> httpx.AsyncClient:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text=ROBOTS)
+        if request.url.path == "/jobs":
+            return httpx.Response(200, text="1,2,3")
+        if request.url.path == "/detail/2":
+            return httpx.Response(500)
+        return httpx.Response(200, text=f"About job {request.url.path.rsplit('/', 1)[1]}")
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+
+async def test_details_are_added_to_new_vacancies_only():
+    client = detail_client()
+    scraper = DetailScraper(client)
+    scraper.start_urls = ("https://example.com/jobs?page=9",)
+
+    vacancies = await scraper.scrape(details=True, skip={"fake:3"})
+
+    assert [v.description for v in vacancies] == ["About job 1", "", ""]
+    await client.aclose()
+
+
+async def test_details_are_capped_per_run():
+    client = detail_client()
+    scraper = DetailScraper(client)
+    scraper.max_details = 1
+    scraper.start_urls = ("https://example.com/jobs?page=9",)
+
+    vacancies = await scraper.scrape(details=True)
+
+    assert [bool(v.description) for v in vacancies] == [True, False, False]
+    await client.aclose()
+
+
+async def test_no_detail_requests_by_default():
+    client = detail_client()
+    scraper = DetailScraper(client)
+    scraper.start_urls = ("https://example.com/jobs?page=9",)
+
+    vacancies = await scraper.scrape()
+
+    assert all(v.description == "" for v in vacancies)
+    await client.aclose()
+
+
+def test_html_to_text_and_job_posting():
+    assert html_to_text("<p>Tələblər:</p><ul><li>1C</li><li> Excel </li></ul>") == (
+        "Tələblər:\n1C\nExcel"
+    )
+    soup = BeautifulSoup(
+        '<script type="application/ld+json">{"@type": "JobPosting", "title": "Mühasib"}</script>'
+        '<script type="application/ld+json">not json</script>',
+        "html.parser",
+    )
+    assert find_job_posting(soup) == {"@type": "JobPosting", "title": "Mühasib"}
+    assert find_job_posting(BeautifulSoup("<p>x</p>", "html.parser")) == {}
