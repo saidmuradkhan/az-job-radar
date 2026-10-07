@@ -84,7 +84,7 @@ def login(client: TestClient, password: str = "letmein", next_url: str = "/"):
 
 
 def test_health(open_client: TestClient):
-    assert open_client.get("/health").json() == {"status": "ok"}
+    assert open_client.get("/health").json() == {"status": "ok", "source": "live"}
 
 
 def test_vacancies_are_sorted_newest_first(open_client: TestClient):
@@ -263,6 +263,7 @@ def test_app_reads_from_the_database_when_configured(tmp_path, monkeypatch):
 
     body = client.get("/vacancies").json()
     assert body["count"] == 2
+    assert client.get("/health").json()["source"] == "database"
 
 
 def test_app_scrapes_live_without_a_database(monkeypatch):

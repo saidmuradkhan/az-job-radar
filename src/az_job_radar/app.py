@@ -156,6 +156,7 @@ def create_app(
     fetch: Fetch = collect,
     preview_gate: gate.PreviewGate | None = None,
     cache_ttl_seconds: float = 30 * 60,
+    source: str = "live",
 ) -> FastAPI:
     app = FastAPI(title="az-job-radar", version="0.2.0")
     app.state.gate = preview_gate
@@ -168,7 +169,7 @@ def create_app(
 
     @app.get("/health")
     async def health() -> dict:
-        return {"status": "ok"}
+        return {"status": "ok", "source": source}
 
     @app.get("/vacancies")
     async def list_vacancies(
@@ -230,4 +231,6 @@ def create_app_from_env() -> FastAPI:
         since = datetime.now(UTC) - RECENT
         return await asyncio.to_thread(load_recent, engine, since)
 
-    return create_app(fetch=fetch, preview_gate=preview_gate, cache_ttl_seconds=5 * 60)
+    return create_app(
+        fetch=fetch, preview_gate=preview_gate, cache_ttl_seconds=5 * 60, source="database"
+    )
