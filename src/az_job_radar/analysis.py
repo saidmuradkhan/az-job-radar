@@ -15,21 +15,25 @@ CATEGORIES = {
     r"|economist|treasury|vergi|\btax\b|kredit|credit|investment|investisiya",
     "hr": r"\bhr\b|insan resurs|kadr|recruit|rekrut|işə qəbul|talent",
     "marketing": r"marketinq|marketing|\bsmm\b|\bseo\b|kontent|content|brand|\bpr\b|reklam",
-    "design": r"dizayn|design|qrafik|graphic",
+    "design": r"dizayn|design|qrafik|graphic|videoqraf|fotoqraf|video montaj",
     "legal": r"hüquq|lawyer|legal|vəkil|compliance",
     "healthcare": r"həkim|doctor|tibb|nurse|əczaçı|pharmac|stomatoloq|dentist|laborant",
-    "education": r"müəllim|teacher|təlimçi|trainer|tərbiyəçi|tutor|ielts|repetitor",
+    "education": r"müəllim|teacher|təlimçi|trainer|tərbiyəçi|tutor|ielts|repetitor|instructor",
     "customer_service": r"operator|call ?cent|çağrı mərkəzi|müştəri xidm"
     r"|customer (?:service|support)",
     "hospitality": r"ofisiant|waiter|aşpaz|\bchef\b|\bcook\b|barmen|barista|\botel|hotel"
-    r"|resepş|reception",
+    r"|resepş|reception|turizm|tourism|reservation",
     "logistics": r"logist|sürücü|driver|anbar|warehouse|kuryer|courier|ekspeditor|supply chain"
-    r"|təchizat",
-    "construction": r"inşaat|construction|usta|santexnik|qaynaqçı|welder|elektrik|electrician",
-    "engineering": r"mühəndis|engineer|texnik|technician|mexanik|qa/qc",
+    r"|təchizat|satınalma|procurement|purchas",
+    "construction": r"inşaat|construction|usta|santexnik|qaynaqçı|welder|elektrik|electrician"
+    r"|smeta|memar|architect|topoqraf|çilingər",
+    "engineering": r"mühəndis|engineer|texnik|technician|mexanik|qa/qc|inspektor|inspector"
+    r"|keyfiyyət|quality|\bndt\b|\bhse\b|\behs\b|əməyin mühafizəsi|sətəm|əl/tmm",
+    "services": r"xadimə|təmizlik|cleaner|mühafizə|security guard|inkassator|dərzi|bərbər",
     "sales": r"satış|sales|satıcı|seller|merchandiser|mağaza|store|business development",
-    "admin": r"ofis|office|katib|secretary|assistant|köməkçi|administrator",
-    "management": r"direktor|director|rəhbər|head of|manager|menecer",
+    "admin": r"ofis|office|katib|secretary|assistant|assistent|köməkçi|administrator"
+    r"|koordinator|coordinator|document control",
+    "management": r"direktor|director|rəhbər|head of|manager|menecer|müdir|team lead",
 }
 
 CATEGORY_LABELS = {
@@ -45,7 +49,8 @@ CATEGORY_LABELS = {
     "hospitality": "Hospitality",
     "logistics": "Logistics",
     "construction": "Construction",
-    "engineering": "Engineering",
+    "engineering": "Engineering & quality",
+    "services": "Services & security",
     "sales": "Sales",
     "admin": "Administration",
     "management": "Management",
