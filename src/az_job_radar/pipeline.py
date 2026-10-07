@@ -34,7 +34,15 @@ def dedupe(vacancies: list[Vacancy]) -> list[Vacancy]:
     return list(newest.values())
 
 
-def process(vacancies: list[Vacancy]) -> list[Vacancy]:
+def posting_date(published_on: date | None, today: date) -> date | None:
+    """A date in the future is usually the application deadline, not the posting date."""
+    if published_on is None or published_on > today:
+        return None
+    return published_on
+
+
+def process(vacancies: list[Vacancy], today: date | None = None) -> list[Vacancy]:
+    today = today or date.today()
     cleaned = []
     for vacancy in vacancies:
         title = clean_title(vacancy.title)
@@ -46,6 +54,7 @@ def process(vacancies: list[Vacancy]) -> list[Vacancy]:
                 title=title,
                 company=vacancy.company.strip(),
                 description=description,
+                published_on=posting_date(vacancy.published_on, today),
                 **asdict(analysis),
             )
         )

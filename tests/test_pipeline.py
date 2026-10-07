@@ -90,3 +90,12 @@ def test_remove_contacts(text, expected):
 def test_process_removes_contacts_from_descriptions():
     [vacancy] = process([make_vacancy(description="Yazın: me@gmail.com")])
     assert vacancy.description == "Yazın: [email]"
+
+
+def test_process_drops_dates_in_the_future():
+    ads = [
+        make_vacancy("1", published_on=date(2026, 11, 30)),
+        make_vacancy("2", published_on=date(2026, 10, 7)),
+    ]
+    result = process(ads, today=date(2026, 10, 7))
+    assert [v.published_on for v in result] == [None, date(2026, 10, 7)]
