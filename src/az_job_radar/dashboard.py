@@ -245,8 +245,12 @@ DASHBOARD_HTML = """<!doctype html>
   </div>
 </main>
 <script>
-  document.getElementById("filters").addEventListener("change", (event) => {{
-    if (!["q", "min_salary"].includes(event.target.name)) event.target.form.submit();
+  const form = document.getElementById("filters");
+  form.addEventListener("submit", () => {{
+    for (const field of form.elements) if (field.name && field.value === "") field.disabled = true;
+  }});
+  form.addEventListener("change", (event) => {{
+    if (!["q", "min_salary"].includes(event.target.name)) form.requestSubmit();
   }});
 </script>
 </body>

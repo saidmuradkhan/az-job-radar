@@ -124,6 +124,13 @@ def test_vacancies_pagination(open_client: TestClient):
 
 def test_bad_filter_value_is_rejected(open_client: TestClient):
     assert open_client.get("/vacancies", params={"max_experience": -1}).status_code == 422
+    assert open_client.get("/vacancies", params={"min_salary": "abc"}).status_code == 422
+
+
+def test_empty_form_fields_mean_no_filter(open_client: TestClient):
+    response = open_client.get("/?q=&category=&max_experience=&min_salary=&city=")
+    assert response.status_code == 200
+    assert "3 vacancies" in response.text
 
 
 def test_vacancy_detail(open_client: TestClient):

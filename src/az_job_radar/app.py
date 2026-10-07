@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
+from pydantic import BeforeValidator, NonNegativeInt
 
 from az_job_radar import gate
 from az_job_radar.collect import collect
@@ -16,6 +17,11 @@ from az_job_radar.models import Vacancy
 from az_job_radar.search import Filters, facets, search
 
 Fetch = Callable[[], Awaitable[list[Vacancy]]]
+
+# HTML forms send "" for an empty number field; treat it as "no filter".
+OptionalNumber = Annotated[
+    NonNegativeInt | None, BeforeValidator(lambda value: value if value != "" else None)
+]
 
 
 @dataclass
@@ -100,8 +106,8 @@ def filters_from_query(
     seniority: str | None = None,
     work_mode: str | None = None,
     employment_type: str | None = None,
-    max_experience: Annotated[int | None, Query(ge=0)] = None,
-    min_salary: Annotated[int | None, Query(ge=0)] = None,
+    max_experience: OptionalNumber = None,
+    min_salary: OptionalNumber = None,
     salary_only: bool = False,
     no_degree: bool = False,
     city: str | None = None,
