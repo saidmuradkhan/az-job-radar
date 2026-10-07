@@ -134,3 +134,9 @@ def mark_duplicates(session: Session, since: datetime) -> int:
     for row in rows:
         row.duplicate_of = duplicates.get(row.uid)
     return len(duplicates)
+
+
+def uids_with_description(engine: Engine) -> set[str]:
+    """Vacancies whose detail page we already read, so the next scrape can skip them."""
+    with Session(engine) as session:
+        return set(session.scalars(select(VacancyRow.uid).where(VacancyRow.description != "")))

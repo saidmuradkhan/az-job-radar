@@ -6,8 +6,11 @@ from az_job_radar import cli
 from az_job_radar.db import ScrapeRun, VacancyRow
 from az_job_radar.models import Vacancy
 
+calls = []
 
-async def fake_collect():
+
+async def fake_collect(details=False, skip=None):
+    calls.append((details, skip))
     return [
         Vacancy(
             source="jobsearch.az",
@@ -15,11 +18,12 @@ async def fake_collect():
             title="Go Developer",
             company="Acme",
             url="https://jobsearch.az/vacancies/7",
+            description="Go, Docker, 2 il təcrübə",
         )
     ]
 
 
-async def broken_collect():
+async def broken_collect(details=False, skip=None):
     raise RuntimeError("offline")
 
 
@@ -47,3 +51,14 @@ def test_scrape_exits_with_error_when_the_run_fails(tmp_path, monkeypatch):
 def test_command_is_required():
     with pytest.raises(SystemExit):
         cli.main([])
+
+
+def test_second_scrape_skips_known_detail_pages(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli, "collect", fake_collect)
+    calls.clear()
+    url = f"sqlite:///{tmp_path / 'radar.db'}"
+
+    cli.main(["scrape", "--database-url", url])
+    cli.main(["scrape", "--database-url", url, "--no-details"])
+
+    assert calls == [(True, set()), (False, {"jobsearch.az:7"})]
