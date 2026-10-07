@@ -140,3 +140,17 @@ def uids_with_description(engine: Engine) -> set[str]:
     """Vacancies whose detail page we already read, so the next scrape can skip them."""
     with Session(engine) as session:
         return set(session.scalars(select(VacancyRow.uid).where(VacancyRow.description != "")))
+
+
+def row_to_vacancy(row: VacancyRow) -> Vacancy:
+    values = {name: getattr(row, name) for name in (*LISTING_FIELDS, *ANALYSIS_FIELDS)}
+    values["tags"] = tuple(row.tags or ())
+    values["languages"] = tuple(row.languages or ())
+    return Vacancy(**values)
+
+
+def load_recent(engine: Engine, since: datetime) -> list[Vacancy]:
+    """Vacancies that were still online at some point after `since`."""
+    with Session(engine) as session:
+        rows = session.scalars(select(VacancyRow).where(VacancyRow.last_seen_at >= since))
+        return [row_to_vacancy(row) for row in rows]

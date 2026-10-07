@@ -1,8 +1,10 @@
 import asyncio
+import os
 import time
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
@@ -12,11 +14,13 @@ from pydantic import BeforeValidator, NonNegativeInt
 from az_job_radar import gate
 from az_job_radar.collect import collect
 from az_job_radar.dashboard import render_dashboard
+from az_job_radar.db import get_engine, load_recent
 from az_job_radar.duplicates import find_duplicates
 from az_job_radar.models import Vacancy
 from az_job_radar.search import Filters, facets, search
 
 Fetch = Callable[[], Awaitable[list[Vacancy]]]
+RECENT = timedelta(days=30)
 
 # HTML forms send "" for an empty number field; treat it as "no filter".
 OptionalNumber = Annotated[
@@ -194,3 +198,18 @@ def create_app(
         )
 
     return app
+
+
+def create_app_from_env() -> FastAPI:
+    """Read from the database when DATABASE_URL is set, otherwise scrape live."""
+    preview_gate = gate.PreviewGate.from_env()
+    if not os.environ.get("DATABASE_URL"):
+        return create_app(preview_gate=preview_gate)
+
+    engine = get_engine()
+
+    async def fetch() -> list[Vacancy]:
+        since = datetime.now(UTC) - RECENT
+        return await asyncio.to_thread(load_recent, engine, since)
+
+    return create_app(fetch=fetch, preview_gate=preview_gate, cache_ttl_seconds=5 * 60)

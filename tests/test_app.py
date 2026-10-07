@@ -1,11 +1,14 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
-from az_job_radar.app import create_app
+from az_job_radar.app import create_app, create_app_from_env
+from az_job_radar.collect import collect
 from az_job_radar.dashboard import format_salary
+from az_job_radar.db import get_engine, upsert_vacancies
 from az_job_radar.gate import COOKIE_NAME, PreviewGate
 from az_job_radar.models import Vacancy
 
@@ -244,3 +247,26 @@ def test_gate_from_env(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("PREVIEW_PASSWORD", "b")
     monkeypatch.setenv("PREVIEW_SECRET", "c")
     assert PreviewGate.from_env() == PreviewGate(user="a", password="b", secret="c")
+
+
+def test_app_reads_from_the_database_when_configured(tmp_path, monkeypatch):
+    url = f"sqlite:///{tmp_path / 'radar.db'}"
+    engine = get_engine(url)
+    with Session(engine) as session:
+        upsert_vacancies(session, VACANCIES[:2], datetime.now(UTC))
+        session.commit()
+    engine.dispose()
+    monkeypatch.setenv("DATABASE_URL", url)
+    monkeypatch.delenv("PREVIEW_USER", raising=False)
+
+    client = TestClient(create_app_from_env())
+
+    body = client.get("/vacancies").json()
+    assert body["count"] == 2
+
+
+def test_app_scrapes_live_without_a_database(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("PREVIEW_USER", raising=False)
+    app = create_app_from_env()
+    assert app.state.cache.fetch is collect
