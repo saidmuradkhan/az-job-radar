@@ -99,6 +99,8 @@ def test_seniority(title, description, seniority):
         ("İş təcrübəsi: 1-3 il", 1),
         ("at least 5 years of experience", 5),
         ("Təcrübəsiz namizədlər də müraciət edə bilər", 0),
+        ("Təcrübə: 1 ildən 3 ilə qədər", 1),
+        ("Təcrübə: 5 ildən artıq", 5),
         ("2010-cu ildən fəaliyyət göstərən şirkət", None),
         ("", None),
     ],

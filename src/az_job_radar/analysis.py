@@ -184,12 +184,14 @@ EMPLOYMENT_TYPES = {
 }
 
 HIGHER_EDUCATION = re.compile(
-    r"ali təhsil|bakalavr|bachelor|magistr|master'?s degree|university degree"
+    r"ali təhsil|təhsil: ali\b|bakalavr|bachelor|magistr|master'?s degree|university degree"
 )
-NO_EXPERIENCE = re.compile(r"təcrübəsiz|təcrübə tələb olunmur|no experience|without experience")
+NO_EXPERIENCE = re.compile(
+    r"təcrübəsiz|təcrübə tələb olunmur|təcrübə: yoxdur|no experience|without experience"
+)
+YEARS = r"(\d{1,2})\s*(?:\+|-\s*\d{1,2})?\s*(?:il|ildən|illik|years?)\b"
 EXPERIENCE = re.compile(
-    r"(\d{1,2})\s*(?:\+|-\s*\d{1,2})?\s*(?:il|ildən|illik|years?)\b[^.\n]{0,40}?(?:təcrübə|experience)"
-    r"|(?:təcrübə|experience)[^.\n\d]{0,40}?(\d{1,2})\s*(?:\+|-\s*\d{1,2})?\s*(?:il|years?)\b"
+    YEARS + r"[^.\n]{0,40}?(?:təcrübə|experience)|(?:təcrübə|experience)[^.\n\d]{0,40}?" + YEARS
 )
 
 
