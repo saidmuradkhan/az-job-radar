@@ -10,6 +10,7 @@ from az_job_radar.db import (
     VacancyRow,
     database_url,
     get_engine,
+    mark_duplicates,
     upsert_vacancies,
 )
 from az_job_radar.models import Vacancy
@@ -104,3 +105,38 @@ def test_upsert_handles_duplicates_in_one_batch(engine):
 
         assert new == 1
         assert session.scalar(select(func.count()).select_from(VacancyRow)) == 1
+
+
+def test_analysis_is_kept_when_a_known_vacancy_comes_back_without_description(engine):
+    analysed = make_vacancy(
+        "1", description="2 il təcrübə", category="it", experience_years=2, languages=("english",)
+    )
+    with Session(engine) as session:
+        upsert_vacancies(session, [analysed], MONDAY)
+        session.commit()
+
+    with Session(engine) as session:
+        upsert_vacancies(session, [make_vacancy("1", title="Python Dev", tags=())], TUESDAY)
+        session.commit()
+        row = session.get(VacancyRow, "boss.az:1")
+
+    assert row.title == "Python Dev"
+    assert row.description == "2 il təcrübə"
+    assert row.experience_years == 2
+    assert row.languages == ["english"]
+    assert row.tags == ["python"]
+
+
+def test_mark_duplicates_links_copies_from_other_sites(engine):
+    boss = make_vacancy("1", company="PASHA Bank ASC")
+    hellojob = make_vacancy("2", source="hellojob.az", company="Pasha Bank", description="Django")
+    other = make_vacancy("3", title="Java Developer")
+
+    with Session(engine) as session:
+        upsert_vacancies(session, [boss, hellojob, other], MONDAY)
+        found = mark_duplicates(session, since=MONDAY)
+        session.commit()
+        rows = {row.uid: row.duplicate_of for row in session.scalars(select(VacancyRow))}
+
+    assert found == 1
+    assert rows == {"boss.az:1": "hellojob.az:2", "hellojob.az:2": None, "boss.az:3": None}

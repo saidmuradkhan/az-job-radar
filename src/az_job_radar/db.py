@@ -5,6 +5,7 @@ from decimal import Decimal
 from sqlalchemy import JSON, DateTime, Engine, Numeric, String, Text, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
+from az_job_radar.duplicates import find_duplicates
 from az_job_radar.models import Vacancy
 
 DEFAULT_DATABASE_URL = "sqlite:///az_job_radar.db"
@@ -28,7 +29,16 @@ class VacancyRow(Base):
     salary_min: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     salary_max: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     currency: Mapped[str] = mapped_column(String(3))
+    description: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str] = mapped_column(String(30), index=True, default="other")
     tags: Mapped[list[str]] = mapped_column(JSON)
+    languages: Mapped[list[str]] = mapped_column(JSON, default=list)
+    experience_years: Mapped[int | None]
+    seniority: Mapped[str | None] = mapped_column(String(20))
+    work_mode: Mapped[str | None] = mapped_column(String(20))
+    employment_type: Mapped[str | None] = mapped_column(String(20))
+    higher_education: Mapped[bool] = mapped_column(default=False)
+    duplicate_of: Mapped[str | None] = mapped_column(String(120), index=True)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
 
@@ -42,6 +52,7 @@ class ScrapeRun(Base):
     status: Mapped[str] = mapped_column(String(20), default="running")
     found: Mapped[int] = mapped_column(default=0)
     new: Mapped[int] = mapped_column(default=0)
+    duplicates: Mapped[int] = mapped_column(default=0)
     error: Mapped[str | None] = mapped_column(Text)
 
 
@@ -59,18 +70,41 @@ def get_engine(url: str | None = None) -> Engine:
     return engine
 
 
+LISTING_FIELDS = (
+    "source",
+    "external_id",
+    "title",
+    "company",
+    "url",
+    "location",
+    "published_on",
+    "salary_min",
+    "salary_max",
+    "currency",
+)
+ANALYSIS_FIELDS = (
+    "description",
+    "category",
+    "tags",
+    "languages",
+    "experience_years",
+    "seniority",
+    "work_mode",
+    "employment_type",
+    "higher_education",
+)
+
+
 def fill_row(row: VacancyRow, vacancy: Vacancy) -> None:
-    row.source = vacancy.source
-    row.external_id = vacancy.external_id
-    row.title = vacancy.title
-    row.company = vacancy.company
-    row.url = vacancy.url
-    row.location = vacancy.location
-    row.published_on = vacancy.published_on
-    row.salary_min = vacancy.salary_min
-    row.salary_max = vacancy.salary_max
-    row.currency = vacancy.currency
-    row.tags = list(vacancy.tags)
+    for name in LISTING_FIELDS:
+        setattr(row, name, getattr(vacancy, name))
+
+    # Known vacancies are re-scraped without their detail page,
+    # so don't replace a full analysis with a title-only one.
+    if vacancy.description or not row.description:
+        for name in ANALYSIS_FIELDS:
+            value = getattr(vacancy, name)
+            setattr(row, name, list(value) if isinstance(value, tuple) else value)
 
 
 def upsert_vacancies(session: Session, vacancies: list[Vacancy], seen_at: datetime) -> int:
@@ -91,3 +125,12 @@ def upsert_vacancies(session: Session, vacancies: list[Vacancy], seen_at: dateti
         fill_row(row, vacancy)
         row.last_seen_at = seen_at
     return new_count
+
+
+def mark_duplicates(session: Session, since: datetime) -> int:
+    """Link cross-site copies of the same job. Returns how many copies were found."""
+    rows = session.scalars(select(VacancyRow).where(VacancyRow.last_seen_at >= since)).all()
+    duplicates = find_duplicates(rows)
+    for row in rows:
+        row.duplicate_of = duplicates.get(row.uid)
+    return len(duplicates)
