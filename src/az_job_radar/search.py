@@ -4,6 +4,9 @@ from datetime import date
 
 from az_job_radar.analysis import fold
 from az_job_radar.models import Vacancy
+from az_job_radar.phrases import frequent_phrases, has_phrases
+
+PHRASE_SAMPLE = 800
 
 
 @dataclass
@@ -12,6 +15,7 @@ class Filters:
     category: str | None = None
     tags: list[str] = field(default_factory=list)
     languages: list[str] = field(default_factory=list)
+    phrases: list[str] = field(default_factory=list)
     seniority: str | None = None
     work_mode: str | None = None
     employment_type: str | None = None
@@ -37,6 +41,8 @@ def matches(vacancy: Vacancy, filters: Filters) -> bool:
     if not set(filters.tags) <= set(vacancy.tags):
         return False
     if not set(filters.languages) <= set(vacancy.languages):
+        return False
+    if filters.phrases and not has_phrases(vacancy, filters.phrases):
         return False
     for name in ("seniority", "work_mode", "employment_type", "source"):
         wanted = getattr(filters, name)
@@ -87,4 +93,7 @@ def facets(vacancies: list[Vacancy], top: int = 25) -> dict[str, list[tuple[str,
                 counters[name][getattr(vacancy, name)] += 1
         if vacancy.location:
             counters["city"][vacancy.location] += 1
-    return {name: counter.most_common(top) for name, counter in counters.items()}
+    result = {name: counter.most_common(top) for name, counter in counters.items()}
+    # The newest few hundred ads are enough to see what keeps repeating.
+    result["phrases"] = frequent_phrases(vacancies[:PHRASE_SAMPLE], top=top)
+    return result

@@ -113,3 +113,16 @@ def test_facets_skip_empty_values():
     assert ("", 1) not in result["city"]
     assert dict(result["seniority"]) == {"middle": 1, "senior": 1}
     assert dict(result["source"]) == {"boss.az": 3, "jobsearch.az": 1}
+
+
+def test_filter_by_repeated_phrase():
+    assert uids(search(VACANCIES, Filters(phrases=["vergi uçotu"]))) == ["3"]
+    assert uids(search(VACANCIES, Filters(phrases=["vergi hesabatı"]))) == []
+
+
+def test_facets_include_repeated_phrases():
+    ads = [
+        make_vacancy(str(i), "Mühasib", description="Kassa əməliyyatlarının aparılması")
+        for i in range(3)
+    ]
+    assert facets(ads)["phrases"] == [("kassa əməliyyatlarının aparılması", 3)]

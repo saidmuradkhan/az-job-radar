@@ -94,6 +94,8 @@ def render_filters(catalog: "Catalog", filters: Filters, found: list[Vacancy]) -
   {option_list("category", category_counts, filters.category, CATEGORY_LABELS, "All categories")}
   <h3>Skills &amp; requirements</h3>
   <div class="checks">{checkbox_list("tag", counts["tags"], filters.tags, {})}</div>
+  <h3>Common in these ads</h3>
+  <div class="checks">{checkbox_list("phrase", counts["phrases"], filters.phrases, {})}</div>
   <h3>Languages</h3>
   <div class="checks">{checkbox_list("language", counts["languages"], filters.languages, {})}</div>
   <h3>Experience</h3>

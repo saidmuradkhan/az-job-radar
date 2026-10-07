@@ -270,3 +270,10 @@ def test_app_scrapes_live_without_a_database(monkeypatch):
     monkeypatch.delenv("PREVIEW_USER", raising=False)
     app = create_app_from_env()
     assert app.state.cache.fetch is collect
+
+
+def test_filter_by_phrase(open_client: TestClient):
+    body = open_client.get("/vacancies", params={"phrase": "ingilis dili"}).json()
+    assert [item["uid"] for item in body["items"]] == ["hellojob.az:9"]
+    page = open_client.get("/").text
+    assert "Common in these ads" in page
