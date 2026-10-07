@@ -122,7 +122,7 @@ def test_filter_by_repeated_phrase():
 
 def test_facets_include_repeated_phrases():
     ads = [
-        make_vacancy(str(i), "Mühasib", description="Kassa əməliyyatlarının aparılması")
+        make_vacancy(str(i), "Mühasib", company=f"C{i}", description="Kassa əməliyyatları")
         for i in range(3)
     ]
-    assert facets(ads)["phrases"] == [("kassa əməliyyatlarının aparılması", 3)]
+    assert facets(ads)["phrases"] == [("kassa əməliyyatları", 3)]
