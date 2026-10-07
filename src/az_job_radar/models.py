@@ -15,7 +15,15 @@ class Vacancy:
     salary_min: Decimal | None = None
     salary_max: Decimal | None = None
     currency: str = "AZN"
+    description: str = ""
+    category: str = "other"
     tags: tuple[str, ...] = field(default_factory=tuple)
+    languages: tuple[str, ...] = field(default_factory=tuple)
+    experience_years: int | None = None
+    seniority: str | None = None
+    work_mode: str | None = None
+    employment_type: str | None = None
+    higher_education: bool = False
 
     @property
     def uid(self) -> str:

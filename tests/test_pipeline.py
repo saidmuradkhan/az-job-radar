@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from az_job_radar.models import Vacancy
-from az_job_radar.pipeline import clean_title, dedupe, extract_tags, process
+from az_job_radar.pipeline import clean_title, dedupe, process
 
 
 @pytest.mark.parametrize(
@@ -20,26 +20,6 @@ from az_job_radar.pipeline import clean_title, dedupe, extract_tags, process
 )
 def test_clean_title(raw, expected):
     assert clean_title(raw) == expected
-
-
-@pytest.mark.parametrize(
-    ("title", "expected"),
-    [
-        ("Senior Python/Django Developer", ("python", "django")),
-        ("Frontend developer (React, TypeScript)", ("typescript", "react", "frontend")),
-        ("Java Developer", ("java",)),
-        ("JavaScript developer", ("javascript",)),
-        ("C# proqramçı", ("c#",)),
-        ("ASP.NET Core developer", (".net",)),
-        ("1C Proqramçı", ("1c",)),
-        ("Junior System Administrator", ("sysadmin",)),
-        ("QA/QC Manager", ("qa",)),
-        ("Golang backend engineer", ("go", "backend")),
-        ("Mühasib", ()),
-    ],
-)
-def test_extract_tags(title, expected):
-    assert extract_tags(title) == expected
 
 
 def make_vacancy(external_id="1", **overrides) -> Vacancy:
@@ -78,7 +58,7 @@ def test_process_cleans_tags_and_dedupes():
     raw = [
         make_vacancy(title="TƏCİLİ! React developer", company="  Acme  "),
         make_vacancy(title="React developer"),
-        make_vacancy("2", title="Mühasib"),
+        make_vacancy("2", title="Mühasib", description="1C və Excel biliyi, 2 il təcrübə"),
     ]
 
     result = process(raw)
@@ -87,5 +67,8 @@ def test_process_cleans_tags_and_dedupes():
     react, accountant = result
     assert react.title == "React developer"
     assert react.company == "Acme"
+    assert react.category == "it"
     assert react.tags == ("react",)
-    assert accountant.tags == ()
+    assert accountant.category == "finance"
+    assert accountant.tags == ("1c", "excel")
+    assert accountant.experience_years == 2
