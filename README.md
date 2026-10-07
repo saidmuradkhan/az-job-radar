@@ -41,7 +41,8 @@ az-job-radar reanalyze           # rerun the analysis on stored ads after changi
 
 By default the data goes to a local SQLite file, `az_job_radar.db`. Set `DATABASE_URL`
 (or pass `--database-url`) to use Postgres; install the driver with `pip install -e ".[postgres]"`.
-The schema changed when ad analysis was added: delete an old local `az_job_radar.db` before scraping.
+The schema is managed with Alembic (`src/az_job_radar/migrations`) and is upgraded automatically
+whenever the app or the CLI connects.
 
 ## How the data flows
 
@@ -121,7 +122,8 @@ isveren.az (under maintenance), hh API (needs a registered app).
 - [x] Normalization: titles, salaries, tech tags (Python, React, Go...)
 - [x] Deduplication by `uid`
 - [x] Store with SQLAlchemy (SQLite locally, `DATABASE_URL` for Postgres), log scrape runs
-- [ ] Postgres on Neon + Alembic migrations
+- [x] Alembic migrations
+- [ ] Postgres on Neon
 - [x] CLI: `az-job-radar scrape`
 - [x] Eight more sources (10 in total), full ad text from detail pages
 - [x] Ad analysis: category, skills, languages, experience, level, work mode, degree

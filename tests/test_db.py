@@ -2,11 +2,14 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
+from alembic.autogenerate import compare_metadata
+from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, func, inspect, select
 from sqlalchemy.orm import Session
 
 from az_job_radar.db import (
     DEFAULT_DATABASE_URL,
+    Base,
     VacancyRow,
     database_url,
     get_engine,
@@ -24,7 +27,7 @@ def engine():
 
 
 def test_tables_are_created(engine):
-    assert set(inspect(engine).get_table_names()) == {"vacancies", "scrape_runs"}
+    assert set(inspect(engine).get_table_names()) == {"vacancies", "scrape_runs", "alembic_version"}
 
 
 def test_database_url_defaults_to_sqlite(monkeypatch):
@@ -145,3 +148,22 @@ def test_mark_duplicates_links_copies_from_other_sites(engine):
 def test_postgres_driver_is_installed():
     engine = create_engine("postgresql+psycopg://user:secret@localhost/radar")
     assert engine.dialect.driver == "psycopg"
+
+
+def test_migrations_match_the_models(engine):
+    with engine.connect() as connection:
+        context = MigrationContext.configure(connection)
+        assert compare_metadata(context, Base.metadata) == []
+
+
+def test_migrations_adopt_tables_created_before_them(tmp_path):
+    url = f"sqlite:///{tmp_path / 'old.db'}"
+    old = create_engine(url)
+    Base.metadata.create_all(old)
+    old.dispose()
+
+    engine = get_engine(url)
+
+    with engine.connect() as connection:
+        assert MigrationContext.configure(connection).get_current_revision() == "0002"
+    engine.dispose()

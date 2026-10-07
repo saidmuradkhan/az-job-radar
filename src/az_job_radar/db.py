@@ -2,7 +2,10 @@ import os
 from dataclasses import asdict
 from datetime import date, datetime
 from decimal import Decimal
+from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import JSON, DateTime, Engine, Numeric, String, Text, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
@@ -11,6 +14,7 @@ from az_job_radar.duplicates import find_duplicates
 from az_job_radar.models import Vacancy
 
 DEFAULT_DATABASE_URL = "sqlite:///az_job_radar.db"
+MIGRATIONS = Path(__file__).parent / "migrations"
 
 
 class Base(DeclarativeBase):
@@ -20,27 +24,27 @@ class Base(DeclarativeBase):
 class VacancyRow(Base):
     __tablename__ = "vacancies"
 
-    uid: Mapped[str] = mapped_column(String(120), primary_key=True)
-    source: Mapped[str] = mapped_column(String(50), index=True)
-    external_id: Mapped[str] = mapped_column(String(60))
-    title: Mapped[str] = mapped_column(String(300))
-    company: Mapped[str] = mapped_column(String(300))
-    url: Mapped[str] = mapped_column(String(500))
-    location: Mapped[str | None] = mapped_column(String(200))
+    uid: Mapped[str] = mapped_column(String, primary_key=True)
+    source: Mapped[str] = mapped_column(String, index=True)
+    external_id: Mapped[str] = mapped_column(String)
+    title: Mapped[str] = mapped_column(String)
+    company: Mapped[str] = mapped_column(String)
+    url: Mapped[str] = mapped_column(String)
+    location: Mapped[str | None] = mapped_column(String)
     published_on: Mapped[date | None]
     salary_min: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     salary_max: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
-    currency: Mapped[str] = mapped_column(String(3))
+    currency: Mapped[str] = mapped_column(String)
     description: Mapped[str] = mapped_column(Text, default="")
-    category: Mapped[str] = mapped_column(String(30), index=True, default="other")
+    category: Mapped[str] = mapped_column(String, index=True, default="other")
     tags: Mapped[list[str]] = mapped_column(JSON)
     languages: Mapped[list[str]] = mapped_column(JSON, default=list)
     experience_years: Mapped[int | None]
-    seniority: Mapped[str | None] = mapped_column(String(20))
-    work_mode: Mapped[str | None] = mapped_column(String(20))
-    employment_type: Mapped[str | None] = mapped_column(String(20))
+    seniority: Mapped[str | None] = mapped_column(String)
+    work_mode: Mapped[str | None] = mapped_column(String)
+    employment_type: Mapped[str | None] = mapped_column(String)
     higher_education: Mapped[bool] = mapped_column(default=False)
-    duplicate_of: Mapped[str | None] = mapped_column(String(120), index=True)
+    duplicate_of: Mapped[str | None] = mapped_column(String, index=True)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
 
@@ -51,7 +55,7 @@ class ScrapeRun(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    status: Mapped[str] = mapped_column(String(20), default="running")
+    status: Mapped[str] = mapped_column(String, default="running")
     found: Mapped[int] = mapped_column(default=0)
     new: Mapped[int] = mapped_column(default=0)
     duplicates: Mapped[int] = mapped_column(default=0)
@@ -74,8 +78,17 @@ def get_engine(url: str | None = None) -> Engine:
         # and serverless connections may be closed while idle.
         options = {"connect_args": {"prepare_threshold": None}, "pool_pre_ping": True}
     engine = create_engine(url, **options)
-    Base.metadata.create_all(engine)
+    migrate(engine)
     return engine
+
+
+def migrate(engine: Engine) -> None:
+    """Bring the database schema up to date (the files are in migrations/versions)."""
+    config = Config()
+    config.set_main_option("script_location", str(MIGRATIONS))
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.upgrade(config, "head")
 
 
 LISTING_FIELDS = (
