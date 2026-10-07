@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 
 import httpx
@@ -10,6 +11,8 @@ from az_job_radar.models import Vacancy
 from az_job_radar.robots import RobotsPolicy
 
 USER_AGENT = "az-job-radar/0.1 (+https://github.com/saidmuradkhan/az-job-radar)"
+FLIGHT_CHUNK = re.compile(r'self\.__next_f\.push\(\[1,"(.*?)"\]\)</script>', re.S)
+FLIGHT_TEXT_ROW = re.compile(rb"(?:^|\n)([0-9a-f]+):T([0-9a-f]+),")
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,21 @@ def build_client() -> httpx.AsyncClient:
 def html_to_text(html: str) -> str:
     """Turn a description written in HTML into plain text, one block per line."""
     return BeautifulSoup(html, "html.parser").get_text("\n", strip=True)
+
+
+def flight_data(text: str) -> str:
+    """Join the Next.js data chunks that the page streams inside <script> tags."""
+    return "".join(json.loads(f'"{chunk}"') for chunk in FLIGHT_CHUNK.findall(text))
+
+
+def flight_texts(data: str) -> dict[str, str]:
+    """Long strings are sent as separate rows like `16:T67b,<text>` and referenced as "$16"."""
+    raw = data.encode()
+    texts = {}
+    for match in FLIGHT_TEXT_ROW.finditer(raw):
+        start, length = match.end(), int(match.group(2), 16)
+        texts["$" + match.group(1).decode()] = raw[start : start + length].decode(errors="ignore")
+    return texts
 
 
 def find_job_posting(soup: BeautifulSoup) -> dict:
