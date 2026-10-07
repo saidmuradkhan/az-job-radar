@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from az_job_radar.models import Vacancy
-from az_job_radar.pipeline import clean_title, dedupe, process
+from az_job_radar.pipeline import clean_title, dedupe, process, remove_contacts
 
 
 @pytest.mark.parametrize(
@@ -72,3 +72,21 @@ def test_process_cleans_tags_and_dedupes():
     assert accountant.category == "finance"
     assert accountant.tags == ("1c", "excel")
     assert accountant.experience_years == 2
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("CV-ni hr.team@company.az ünvanına göndərin", "CV-ni [email] ünvanına göndərin"),
+        ("Əlaqə: (050) 210-07-86", "Əlaqə: [phone]"),
+        ("Tel: +994 55 440 74 04, 070-440-19-12", "Tel: [phone], [phone]"),
+        ("Maaş 1500 AZN, 09:00-18:00, 2026-10-07", "Maaş 1500 AZN, 09:00-18:00, 2026-10-07"),
+    ],
+)
+def test_remove_contacts(text, expected):
+    assert remove_contacts(text) == expected
+
+
+def test_process_removes_contacts_from_descriptions():
+    [vacancy] = process([make_vacancy(description="Yazın: me@gmail.com")])
+    assert vacancy.description == "Yazın: [email]"
