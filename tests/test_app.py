@@ -342,6 +342,27 @@ def test_dashboard_chart_leaves_out_picked_skills(open_client: TestClient):
     assert "Top skills in these results" not in page
 
 
+def test_dashboard_shows_the_median_salary():
+    priced = [
+        Vacancy(
+            source="boss.az",
+            external_id=str(number),
+            title=f"Accountant {number}",
+            company=f"Company {number}",
+            url="u",
+            salary_min=Decimal(low),
+            salary_max=Decimal(low),
+        )
+        for number, low in enumerate([800, 1200, 2000], start=1)
+    ]
+
+    async def fetch_priced() -> list[Vacancy]:
+        return priced
+
+    page = TestClient(create_app(fetch=fetch_priced)).get("/").text
+    assert "median salary 1,200 AZN (half between 1,000 and 1,600, from 3 ads)" in page
+
+
 def test_page_links_keep_the_filters():
     links = page_links("category=it&page=2", page=2, pages=3)
     assert '<a href="/?category=it&amp;page=1">1</a>' in links

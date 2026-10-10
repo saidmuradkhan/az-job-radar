@@ -6,7 +6,7 @@ from urllib.parse import parse_qsl, urlencode
 from az_job_radar.analysis import CATEGORY_LABELS
 from az_job_radar.models import Vacancy
 from az_job_radar.search import Filters, facets
-from az_job_radar.stats import technology_stats
+from az_job_radar.stats import salary_stats, technology_stats
 
 if TYPE_CHECKING:
     from az_job_radar.app import Catalog
@@ -175,6 +175,17 @@ def render_top_skills(found: list[Vacancy], query: str, selected: list[str]) -> 
 </section>"""
 
 
+def salary_line(found: list[Vacancy]) -> str:
+    overall = salary_stats(found)["overall"]
+    if overall is None:
+        return ""
+    return (
+        f" · median salary {overall['median']:,} AZN"
+        f" (half between {overall['p25']:,} and {overall['p75']:,},"
+        f" from {overall['count']} ads)"
+    )
+
+
 def page_links(query: str, page: int, pages: int) -> str:
     if pages <= 1:
         return ""
@@ -201,6 +212,7 @@ def render_dashboard(
         filters=render_filters(catalog, filters, found),
         chart=render_top_skills(found, query, filters.tags),
         count=len(found),
+        salary=salary_line(found),
         merged=merged,
         cards=cards or '<p class="meta">No vacancies match these filters.</p>',
         pages=page_links(query, page, pages),
@@ -273,7 +285,7 @@ DASHBOARD_HTML = """<!doctype html>
     <h1>az-job-radar</h1>
     <span class="meta"><a href="/docs">API docs</a> {logout}</span>
   </header>
-  <p class="meta">{count} vacancies · {merged} duplicate posts merged</p>
+  <p class="meta">{count} vacancies · {merged} duplicate posts merged{salary}</p>
   <div class="layout">
     {filters}
     <section>
