@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from az_job_radar.app import create_app, create_app_from_env
 from az_job_radar.collect import collect
-from az_job_radar.dashboard import format_salary
+from az_job_radar.dashboard import format_salary, page_links
 from az_job_radar.db import get_engine, upsert_vacancies
 from az_job_radar.gate import COOKIE_NAME, PreviewGate
 from az_job_radar.models import Vacancy
@@ -340,3 +340,10 @@ def test_dashboard_chart_leaves_out_picked_skills(open_client: TestClient):
     assert '">python</a><span class="bar">' not in page
     page = open_client.get("/", params={"q": "react"}).text
     assert "Top skills in these results" not in page
+
+
+def test_page_links_keep_the_filters():
+    links = page_links("category=it&page=2", page=2, pages=3)
+    assert '<a href="/?category=it&amp;page=1">1</a>' in links
+    assert "<strong>2</strong>" in links
+    assert page_links("", page=1, pages=1) == ""
