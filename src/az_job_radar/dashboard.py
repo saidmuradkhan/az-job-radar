@@ -178,14 +178,12 @@ def render_top_skills(found: list[Vacancy], query: str, selected: list[str]) -> 
 def page_links(query: str, page: int, pages: int) -> str:
     if pages <= 1:
         return ""
-    params = [(k, v) for k, v in parse_qsl(query) if k != "page"]
     links = []
     for number in range(1, pages + 1):
         if number == page:
             links.append(f"<strong>{number}</strong>")
         else:
-            href = escape(urlencode([*params, ("page", number)]))
-            links.append(f'<a href="/?{href}">{number}</a>')
+            links.append(f'<a href="/?{with_param(query, "page", str(number))}">{number}</a>')
     return f'<nav class="pages">{" ".join(links)}</nav>'
 
 
