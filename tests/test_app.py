@@ -325,3 +325,18 @@ def test_salary_stats_for_one_category():
     body = client.get("/stats/salaries", params={"category": "finance"}).json()
     assert body["overall"]["median"] == 1250
     assert body["by_category"][0]["category"] == "finance"
+
+
+def test_dashboard_charts_top_skills(open_client: TestClient):
+    page = open_client.get("/", params={"category": "it"}).text
+    assert "Top skills in these results" in page
+    assert '<a href="/?category=it&amp;tag=python">python</a>' in page
+    assert 'style="width: 100%"' in page
+
+
+def test_dashboard_chart_leaves_out_picked_skills(open_client: TestClient):
+    page = open_client.get("/", params={"tag": "python"}).text
+    assert "tag=python&amp;tag=django" in page
+    assert '">python</a><span class="bar">' not in page
+    page = open_client.get("/", params={"q": "react"}).text
+    assert "Top skills in these results" not in page

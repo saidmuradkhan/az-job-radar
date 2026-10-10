@@ -6,6 +6,7 @@ from urllib.parse import parse_qsl, urlencode
 from az_job_radar.analysis import CATEGORY_LABELS
 from az_job_radar.models import Vacancy
 from az_job_radar.search import Filters, facets
+from az_job_radar.stats import technology_stats
 
 if TYPE_CHECKING:
     from az_job_radar.app import Catalog
@@ -149,6 +150,31 @@ def render_card(vacancy: Vacancy, copies: list[Vacancy]) -> str:
 </article>"""
 
 
+def with_param(query: str, name: str, value: str) -> str:
+    params = [(k, v) for k, v in parse_qsl(query) if k != "page"]
+    return escape(urlencode([*params, (name, value)]))
+
+
+def render_top_skills(found: list[Vacancy], query: str, selected: list[str]) -> str:
+    items = [
+        item for item in technology_stats(found, top=20)["items"] if item["name"] not in selected
+    ][:10]
+    if not items:
+        return ""
+    most = items[0]["count"]
+    rows = "".join(
+        f'<li><a href="/?{with_param(query, "tag", item["name"])}">{escape(item["name"])}</a>'
+        f'<span class="bar"><span style="width: {item["count"] / most:.0%}"></span></span>'
+        f'<span class="meta">{item["count"]}</span></li>'
+        for item in items
+    )
+    return f"""
+<section class="panel">
+  <h3>Top skills in these results</h3>
+  <ol class="bars">{rows}</ol>
+</section>"""
+
+
 def page_links(query: str, page: int, pages: int) -> str:
     if pages <= 1:
         return ""
@@ -175,6 +201,7 @@ def render_dashboard(
     logout = '<a href="/logout">Log out</a>' if show_logout else ""
     return DASHBOARD_HTML.format(
         filters=render_filters(catalog, filters, found),
+        chart=render_top_skills(found, query, filters.tags),
         count=len(found),
         merged=merged,
         cards=cards or '<p class="meta">No vacancies match these filters.</p>',
@@ -227,6 +254,17 @@ DASHBOARD_HTML = """<!doctype html>
   .chip {{ display: inline-block; background: var(--chip); border-radius: 999px;
           padding: .05rem .55rem; margin: 0 .3rem .3rem 0; font-size: .82rem; }}
   .chip.category {{ background: var(--accent); color: #fff; }}
+  .panel {{ background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+           padding: .2rem 1rem .8rem; margin-bottom: .75rem; }}
+  .panel h3 {{ font-size: .8rem; text-transform: uppercase; letter-spacing: .04em;
+              color: var(--muted); margin: .8rem 0 .5rem; }}
+  .bars {{ list-style: none; margin: 0; padding: 0; }}
+  .bars li {{ display: grid; grid-template-columns: 8rem 1fr 3rem; gap: .6rem;
+             align-items: center; padding: .12rem 0; }}
+  .bars li a {{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+  .bar {{ background: var(--chip); border-radius: 4px; height: .7rem; }}
+  .bar span {{ display: block; height: 100%; border-radius: 4px; background: var(--accent); }}
+  .bars .meta {{ text-align: right; margin: 0; }}
   .pages {{ display: flex; gap: .6rem; flex-wrap: wrap; margin: 1rem 0; }}
   @media (max-width: 760px) {{ .layout {{ grid-template-columns: 1fr; }} }}
 </style>
@@ -241,6 +279,7 @@ DASHBOARD_HTML = """<!doctype html>
   <div class="layout">
     {filters}
     <section>
+      {chart}
       {cards}
       {pages}
     </section>
