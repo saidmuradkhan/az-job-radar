@@ -19,6 +19,7 @@ from az_job_radar.duplicates import find_duplicates
 from az_job_radar.models import Vacancy
 from az_job_radar.phrases import employer_count, phrase_counts
 from az_job_radar.search import Filters, facets, search
+from az_job_radar.stats import technology_stats
 
 Fetch = Callable[[], Awaitable[list[Vacancy]]]
 RECENT = timedelta(days=30)
@@ -200,6 +201,16 @@ def create_app(
         return vacancy_to_dict(vacancy, catalog.copies.get(uid)) | {
             "description": vacancy.description
         }
+
+    @app.get("/stats/technologies")
+    async def technologies(
+        request: Request,
+        filters: Annotated[Filters, Depends(filters_from_query)],
+        group: str | None = None,
+        top: Annotated[int, Query(ge=1, le=100)] = 20,
+    ) -> dict:
+        catalog: Catalog = await request.app.state.cache.get()
+        return technology_stats(catalog.search(filters), group=group or None, top=top)
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def dashboard(

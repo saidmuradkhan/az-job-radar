@@ -278,3 +278,18 @@ def test_filter_by_phrase(open_client: TestClient):
     assert [item["uid"] for item in body["items"]] == ["hellojob.az:9"]
     page = open_client.get("/").text
     assert "Common in these ads" in page
+
+
+def test_technology_stats(open_client: TestClient):
+    body = open_client.get("/stats/technologies").json()
+    assert body["vacancies"] == 3
+    assert body["items"][0]["name"] == "python"
+    assert body["items"][0]["count"] == 1
+
+
+def test_technology_stats_follow_filters(open_client: TestClient):
+    body = open_client.get("/stats/technologies", params={"q": "react"}).json()
+    assert body == {"vacancies": 1, "items": []}
+    body = open_client.get("/stats/technologies", params={"group": "Frameworks"}).json()
+    assert [item["name"] for item in body["items"]] == ["django"]
+    assert open_client.get("/stats/technologies", params={"top": 0}).status_code == 422
