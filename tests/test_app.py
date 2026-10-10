@@ -293,3 +293,35 @@ def test_technology_stats_follow_filters(open_client: TestClient):
     body = open_client.get("/stats/technologies", params={"group": "Frameworks"}).json()
     assert [item["name"] for item in body["items"]] == ["django"]
     assert open_client.get("/stats/technologies", params={"top": 0}).status_code == 422
+
+
+def test_salary_stats(open_client: TestClient):
+    body = open_client.get("/stats/salaries").json()
+    assert body["currency"] == "AZN"
+    assert body["vacancies"] == 3
+    assert body["with_salary"] == 0
+    assert body["overall"] is None
+
+
+def test_salary_stats_for_one_category():
+    priced = [
+        Vacancy(
+            source="boss.az",
+            external_id=str(number),
+            title=f"Accountant {number}",
+            company=f"Company {number}",
+            url="u",
+            salary_min=Decimal(low),
+            salary_max=Decimal(low + 500),
+            category="finance",
+        )
+        for number, low in enumerate([800, 1000, 1500], start=1)
+    ]
+
+    async def fetch_priced() -> list[Vacancy]:
+        return priced
+
+    client = TestClient(create_app(fetch=fetch_priced))
+    body = client.get("/stats/salaries", params={"category": "finance"}).json()
+    assert body["overall"]["median"] == 1250
+    assert body["by_category"][0]["category"] == "finance"
