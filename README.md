@@ -12,8 +12,8 @@ posted on several sites, and lets you filter all of it through a FastAPI REST AP
 
 ## Tech stack
 
-Python 3.12+ · asyncio · httpx · BeautifulSoup · SQLAlchemy · FastAPI · pytest · Ruff · GitHub Actions · Vercel
-*(planned: PostgreSQL on Neon, scheduled scraping, Docker)*
+Python 3.12+ · asyncio · httpx · BeautifulSoup · SQLAlchemy · Alembic · PostgreSQL (Neon) · FastAPI · pytest · Ruff · GitHub Actions · Vercel
+*(planned: Docker)*
 
 ## Getting started
 
@@ -77,6 +77,26 @@ so the most common requirements of a category come first.
 GET /vacancies?category=finance&tag=1c&language=english&max_experience=2
 ```
 
+## Statistics
+
+Both endpoints accept the same filters as `/vacancies`, so the numbers always describe the
+current selection.
+
+- `GET /stats/technologies?group=&top=20`: how many ads ask for each skill, with its group
+  (`Programming languages`, `Frameworks`, `Accounting & finance`...) and its share of the ads.
+- `GET /stats/salaries`: count, min, quartiles, median and max of monthly salaries, overall,
+  per category and per level. A range counts as its middle (`1500 - 2000` → 1750). Only AZN
+  salaries of at least 100 are used, so daily rates and other currencies do not skew the numbers.
+  Groups with fewer than 3 salaries are left out.
+
+```
+GET /stats/technologies?category=it&top=10
+GET /stats/salaries?category=finance
+```
+
+The dashboard shows the same data: a bar chart of the top skills in the current results (a click
+on a bar adds that skill to the filters) and the median salary next to the result count.
+
 ## Deployment
 
 The app runs on Vercel as a single Python function (`index.py`, see `vercel.json`).
@@ -123,18 +143,18 @@ isveren.az (under maintenance), hh API (needs a registered app).
 - [x] Deduplication by `uid`
 - [x] Store with SQLAlchemy (SQLite locally, `DATABASE_URL` for Postgres), log scrape runs
 - [x] Alembic migrations
-- [ ] Postgres on Neon
+- [x] Postgres on Neon
 - [x] CLI: `az-job-radar scrape`
 - [x] Eight more sources (10 in total), full ad text from detail pages
 - [x] Ad analysis: category, skills, languages, experience, level, work mode, degree
 - [x] Filters + counts in the API and the dashboard, repeated phrases per category
 - [x] Same ad on several sites shown once (cross-site duplicate detection)
-- [ ] Analytics: most requested technologies, salary ranges
+- [x] Analytics: most requested technologies, salary ranges
 - [x] FastAPI: `/vacancies`, `/vacancies/{uid}` and a dashboard
 - [x] Preview deployment on Vercel behind a login page
-- [ ] FastAPI: `/stats/technologies`, `/stats/salaries`
+- [x] FastAPI: `/stats/technologies`, `/stats/salaries`, top skills chart on the dashboard
 - [ ] Docker + docker-compose
-- [ ] Scheduled scraping (GitHub Actions cron)
+- [x] Scheduled scraping (GitHub Actions cron)
 
 ## Ethics
 
