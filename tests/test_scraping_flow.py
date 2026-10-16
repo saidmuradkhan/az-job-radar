@@ -3,7 +3,8 @@ from dataclasses import replace
 import httpx
 from bs4 import BeautifulSoup
 
-from az_job_radar.collect import SCRAPERS, run_scrapers
+from az_job_radar import collect as collect_module
+from az_job_radar.collect import SCRAPERS, collect, run_scrapers
 from az_job_radar.models import Vacancy
 from az_job_radar.robots import RobotsPolicy
 from az_job_radar.scrapers.base import USER_AGENT, BaseScraper, find_job_posting, html_to_text
@@ -190,8 +191,8 @@ def test_html_to_text_and_job_posting():
         "Tələblər:\n1C\nExcel"
     )
     soup = BeautifulSoup(
-        '<script type="application/ld+json">{"@type": "JobPosting", "title": "Mühasib"}</script>'
-        '<script type="application/ld+json">not json</script>',
+        '<script type="application/ld+json">not json</script>'
+        '<script type="application/ld+json">{"@type": "JobPosting", "title": "Mühasib"}</script>',
         "html.parser",
     )
     assert find_job_posting(soup) == {"@type": "JobPosting", "title": "Mühasib"}
@@ -202,3 +203,42 @@ def test_all_ten_sites_are_collected():
     sources = {scraper.source for scraper in SCRAPERS}
     assert len(sources) == 10
     assert {"boss.az", "jobsearch.az", "hellojob.az", "jobs.glorri.az"} <= sources
+
+
+class OfflineScraper(BaseScraper):
+    source = "offline.az"
+
+    def parse_listing(self, text: str) -> list[Vacancy]:
+        return []
+
+    async def scrape(self, details: bool = False, skip: set[str] | None = None) -> list[Vacancy]:
+        return [make_vacancy("1", self.source), make_vacancy("2", self.source)]
+
+
+async def test_collect_runs_every_registered_scraper(monkeypatch):
+    monkeypatch.setattr(collect_module, "SCRAPERS", [OfflineScraper])
+
+    vacancies = await collect()
+
+    assert [v.uid for v in vacancies] == ["offline.az:1", "offline.az:2"]
+
+
+async def test_a_scraper_closes_only_the_client_it_created():
+    own = FakeScraper()
+    await own.close()
+    assert own._client.is_closed
+
+    shared = httpx.AsyncClient()
+    borrowed = FakeScraper(shared)
+    await borrowed.close()
+    assert not shared.is_closed
+    await shared.aclose()
+
+
+async def test_base_scraper_has_no_next_page_or_details_by_default():
+    scraper = FakeScraper()
+    vacancy = make_vacancy("1")
+    assert BaseScraper.next_page_url(scraper, "", "https://example.com") is None
+    assert scraper.detail_url(vacancy) is None
+    assert scraper.parse_detail("<p>x</p>", vacancy) is vacancy
+    await scraper.close()
