@@ -45,7 +45,12 @@ async def run_scrapers(
         if isinstance(result, Exception):
             logger.warning("%s failed: %s", scraper.source, result)
             continue
-        logger.info("%s: %d vacancies", scraper.source, len(result))
+        if not result:
+            logger.warning(
+                "%s: no vacancies, the site may block us or have changed", scraper.source
+            )
+        else:
+            logger.info("%s: %d vacancies", scraper.source, len(result))
         vacancies.extend(result)
     return process(vacancies)
 

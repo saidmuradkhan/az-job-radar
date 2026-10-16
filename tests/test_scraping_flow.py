@@ -119,6 +119,15 @@ async def test_one_failing_source_does_not_stop_the_others():
     assert [v.uid for v in vacancies] == ["ok:1"]
 
 
+async def test_a_source_with_no_vacancies_is_reported(caplog):
+    empty = StaticScraper("quiet.az", [])
+
+    with caplog.at_level("WARNING"):
+        assert await run_scrapers([empty]) == []
+
+    assert "quiet.az: no vacancies" in caplog.text
+
+
 class DetailScraper(FakeScraper):
     max_pages = 1
 
