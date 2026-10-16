@@ -64,9 +64,7 @@ class Catalog:
         # Compare with all ads only for a narrower group, otherwise everything looks ordinary.
         if len(found) * 2 > len(self.vacancies):
             return facets(found)
-        return facets(
-            found, background=self.phrase_background, background_size=self.employers
-        )
+        return facets(found, background=self.phrase_background, background_size=self.employers)
 
     def search(self, filters: Filters) -> list[Vacancy]:
         found = search(self.vacancies, replace(filters, source=None))

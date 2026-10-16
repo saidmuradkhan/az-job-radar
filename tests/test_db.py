@@ -39,7 +39,10 @@ def test_database_url_defaults_to_sqlite(monkeypatch):
     ("given", "expected"),
     [
         ("postgres://u:p@host/db", "postgresql+psycopg://u:p@host/db"),
-        ("postgresql://u:p@host/db?sslmode=require", "postgresql+psycopg://u:p@host/db?sslmode=require"),
+        (
+            "postgresql://u:p@host/db?sslmode=require",
+            "postgresql+psycopg://u:p@host/db?sslmode=require",
+        ),
         ("sqlite:///other.db", "sqlite:///other.db"),
     ],
 )

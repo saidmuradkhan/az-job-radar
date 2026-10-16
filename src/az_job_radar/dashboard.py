@@ -87,6 +87,13 @@ def render_filters(catalog: "Catalog", filters: Filters, found: list[Vacancy]) -
         f"{text}</option>"
         for value, text in EXPERIENCE_OPTIONS
     )
+    employment = option_list(
+        "employment_type",
+        counts["employment_type"],
+        filters.employment_type,
+        EMPLOYMENT_LABELS,
+        "Any",
+    )
     return f"""
 <form method="get" action="/" class="filters" id="filters">
   <input type="search" name="q" value="{escape(filters.q, quote=True)}"
@@ -106,8 +113,7 @@ def render_filters(catalog: "Catalog", filters: Filters, found: list[Vacancy]) -
   <h3>Work mode</h3>
   {option_list("work_mode", counts["work_mode"], filters.work_mode, WORK_MODE_LABELS, "Any")}
   <h3>Employment</h3>
-  {option_list("employment_type", counts["employment_type"], filters.employment_type,
-               EMPLOYMENT_LABELS, "Any")}
+  {employment}
   <h3>Salary</h3>
   <input type="number" name="min_salary" min="0" step="100" placeholder="Minimum, AZN"
          value="{filters.min_salary or ""}">

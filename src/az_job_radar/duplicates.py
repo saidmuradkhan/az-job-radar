@@ -28,7 +28,6 @@ PLACES = set(
 PLACE_ENDINGS = ("", "da", "de", "dan", "den", "ya", "ye", "a", "e", "nin", "in", "un")
 
 
-
 class Posting(Protocol):
     uid: str
     source: str
