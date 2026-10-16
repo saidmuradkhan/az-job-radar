@@ -23,6 +23,7 @@ dependencies = [
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
+    "pytest-cov>=5",
     "ruff>=0.6",
     "uvicorn>=0.30",
 ]
@@ -36,6 +37,14 @@ entrypoint = "index:app"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["az_job_radar"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
 
 [tool.ruff]
 line-length = 100
