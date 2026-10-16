@@ -259,11 +259,13 @@ def test_app_reads_from_the_database_when_configured(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", url)
     monkeypatch.delenv("PREVIEW_USER", raising=False)
 
-    client = TestClient(create_app_from_env())
+    app = create_app_from_env()
+    client = TestClient(app)
 
     body = client.get("/vacancies").json()
     assert body["count"] == 2
     assert client.get("/health").json()["source"] == "database"
+    app.state.engine.dispose()
 
 
 def test_app_scrapes_live_without_a_database(monkeypatch):

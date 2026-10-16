@@ -249,6 +249,8 @@ def create_app_from_env() -> FastAPI:
         since = datetime.now(UTC) - RECENT
         return await asyncio.to_thread(load_recent, engine, since)
 
-    return create_app(
+    app = create_app(
         fetch=fetch, preview_gate=preview_gate, cache_ttl_seconds=5 * 60, source="database"
     )
+    app.state.engine = engine
+    return app
