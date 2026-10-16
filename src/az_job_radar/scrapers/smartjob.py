@@ -2,20 +2,13 @@ from dataclasses import replace
 from datetime import date, datetime
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
 from az_job_radar.models import Vacancy
 from az_job_radar.parsing import parse_currency, parse_salary
-from az_job_radar.scrapers.base import BaseScraper, find_job_posting, html_to_text
+from az_job_radar.scrapers.base import BaseScraper, find_job_posting, html_to_text, select_text
 
 BASE_URL = "https://smartjob.az"
-
-
-def text_of(card: Tag, selector: str) -> str | None:
-    element = card.select_one(selector)
-    if element is None:
-        return None
-    return element.get_text(" ", strip=True) or None
 
 
 def city_of(posting: dict) -> str | None:
@@ -48,17 +41,17 @@ class SmartJobScraper(BaseScraper):
             if not external_id.isdigit() or not title:
                 continue
 
-            salary_text = text_of(card, ".job-salary-highlight strong")
+            salary_text = select_text(card, ".job-salary-highlight strong")
             salary_min, salary_max = parse_salary(salary_text)
             vacancies.append(
                 Vacancy(
                     source=self.source,
                     external_id=external_id,
                     title=title,
-                    company=text_of(card, ".job-row-main > p") or "",
+                    company=select_text(card, ".job-row-main > p") or "",
                     url=urljoin(BASE_URL, link["href"]),
-                    location=text_of(card, ".job-facts span"),
-                    published_on=parse_day(text_of(card, ".job-row-side-meta small")),
+                    location=select_text(card, ".job-facts span"),
+                    published_on=parse_day(select_text(card, ".job-row-side-meta small")),
                     salary_min=salary_min,
                     salary_max=salary_max,
                     currency=parse_currency(salary_text),

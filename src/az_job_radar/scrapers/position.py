@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup, Tag
 from az_job_radar.models import Vacancy
 from az_job_radar.parsing import parse_listing_date
 from az_job_radar.robots import RobotsPolicy
-from az_job_radar.scrapers.base import BaseScraper, html_to_text
+from az_job_radar.scrapers.base import BaseScraper, html_to_text, select_text
 
 BASE_URL = "https://position.az/"
 VACANCY_ID = re.compile(r"/vacancy/[^/]*?-(\d+)$")
@@ -42,13 +42,6 @@ def row_city(row: Tag, cities: dict[str, str]) -> str | None:
         return None
     names = [cities[str(city_id)] for city_id in ids if str(city_id) in cities]
     return ", ".join(names) or None
-
-
-def select_text(soup: BeautifulSoup, selector: str) -> str | None:
-    element = soup.select_one(selector)
-    if element is None:
-        return None
-    return element.get_text(" ", strip=True) or None
 
 
 def detail_city(soup: BeautifulSoup) -> str | None:

@@ -7,17 +7,10 @@ from bs4 import BeautifulSoup, Tag
 
 from az_job_radar.models import Vacancy
 from az_job_radar.parsing import parse_currency, parse_salary
-from az_job_radar.scrapers.base import BaseScraper, find_job_posting, html_to_text
+from az_job_radar.scrapers.base import BaseScraper, find_job_posting, html_to_text, select_text
 
 BASE_URL = "https://ejob.az"
 VACANCY_ID = re.compile(r"/is-elani/(\d+)")
-
-
-def text_of(card: Tag, selector: str) -> str | None:
-    element = card.select_one(selector)
-    if element is None:
-        return None
-    return element.get_text(" ", strip=True) or None
 
 
 def city_of(card: Tag) -> str | None:
@@ -44,7 +37,7 @@ class EJobScraper(BaseScraper):
             if not match or not title:
                 continue
 
-            salary_text = text_of(card, "div.salary")
+            salary_text = select_text(card, "div.salary")
             salary_min, salary_max = parse_salary(salary_text)
             # The card date can be a paid "bump", so the real one comes from the detail page.
             vacancies.append(
@@ -52,7 +45,7 @@ class EJobScraper(BaseScraper):
                     source=self.source,
                     external_id=match.group(1),
                     title=title,
-                    company=text_of(card, "div.company") or "",
+                    company=select_text(card, "div.company") or "",
                     url=urljoin(BASE_URL, link["href"]),
                     location=city_of(card),
                     salary_min=salary_min,

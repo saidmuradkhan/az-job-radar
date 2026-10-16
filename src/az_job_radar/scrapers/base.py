@@ -5,7 +5,7 @@ import re
 from abc import ABC, abstractmethod
 
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from az_job_radar.models import Vacancy
 from az_job_radar.robots import RobotsPolicy
@@ -28,6 +28,14 @@ def build_client() -> httpx.AsyncClient:
 def html_to_text(html: str) -> str:
     """Turn a description written in HTML into plain text, one block per line."""
     return BeautifulSoup(html, "html.parser").get_text("\n", strip=True)
+
+
+def select_text(parent: Tag, selector: str) -> str | None:
+    """Text of the first element matching the CSS selector, or None if it is missing or empty."""
+    element = parent.select_one(selector)
+    if element is None:
+        return None
+    return element.get_text(" ", strip=True) or None
 
 
 def flight_data(text: str) -> str:
