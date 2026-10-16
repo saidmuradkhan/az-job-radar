@@ -1,3 +1,5 @@
+import runpy
+
 import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
@@ -80,3 +82,11 @@ def test_reanalyze_updates_stored_vacancies(tmp_path, monkeypatch, capsys):
     with Session(engine) as session:
         assert session.get(VacancyRow, "jobsearch.az:7").tags == ["go", "docker"]
     engine.dispose()
+
+
+def test_runs_as_a_module(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["az-job-radar", "--help"])
+    with pytest.raises(SystemExit) as exit_info:
+        runpy.run_module("az_job_radar", run_name="__main__")
+    assert exit_info.value.code == 0
+    assert "scrape" in capsys.readouterr().out
