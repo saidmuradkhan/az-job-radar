@@ -48,6 +48,7 @@ def test_different_companies_have_different_keys():
         ("Mühasib", "Baş mühasib", False),
         ("Python Developer", "Java Developer", False),
         ("Satış təmsilçisi", "Satış meneceri", False),
+        ("", "Mühasib", False),
     ],
 )
 def test_title_similarity(a, b, similar):
@@ -104,6 +105,17 @@ def test_find_duplicates_prefers_the_oldest_copy_when_equally_rich():
     ]
 
     assert find_duplicates(postings) == {"ejob.az:5": "boss.az:7"}
+
+
+def test_find_duplicates_links_an_ad_without_company_by_its_title_words():
+    text = "Tələblər: 1C, Excel, 3 il təcrübə. Bakı şəhəri, tam ştat. " * 5
+    postings = [
+        make_vacancy("boss.az", "1", "Baş mühasib", "Acme", description=text),
+        make_vacancy("jobsearch.az", "2", "Baş mühasib", "", description=text),
+        make_vacancy("ejob.az", "3", "Sürücü", "", description=text),
+    ]
+
+    assert find_duplicates(postings) == {"jobsearch.az:2": "boss.az:1"}
 
 
 def test_no_duplicates():
