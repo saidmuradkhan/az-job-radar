@@ -8,12 +8,13 @@ posted on several sites, and lets you filter all of it through a FastAPI REST AP
 
 **Live demo:** [radar.saidmuradkhan.dev](https://radar.saidmuradkhan.dev) · [API docs](https://radar.saidmuradkhan.dev/docs) *(private preview, login required for now)*
 
+![Dashboard with filters and the top skills chart](docs/screenshots/dashboard.png)
+
 > Part of a 3-service system: **az-job-radar** (Python) · [cbar-rates](https://github.com/saidmuradkhan/cbar-rates) (Go) · [jobtrack](https://github.com/saidmuradkhan/jobtrack) (Django + React)
 
 ## Tech stack
 
 Python 3.12+ · asyncio · httpx · BeautifulSoup · SQLAlchemy · Alembic · PostgreSQL (Neon) · FastAPI · pytest · Ruff · GitHub Actions · Vercel
-*(planned: Docker)*
 
 ## Getting started
 
@@ -21,8 +22,12 @@ Python 3.12+ · asyncio · httpx · BeautifulSoup · SQLAlchemy · Alembic · Po
 python -m venv .venv
 .venv\Scripts\activate        # Windows  (Linux/macOS: source .venv/bin/activate)
 pip install -e ".[dev]"
-pytest
+pytest --cov
+ruff check . && ruff format --check .
 ```
+
+The tests never touch the internet: every scraper is tested against pages saved in
+`tests/fixtures/`. CI fails if coverage drops below 85% (it is at 98%).
 
 Run the web app (dashboard with filters at `/`, JSON at `/vacancies`, API docs at `/docs`).
 With `DATABASE_URL` set it reads from the database, otherwise it scrapes the listing pages live:
@@ -40,9 +45,71 @@ az-job-radar reanalyze           # rerun the analysis on stored ads after changi
 ```
 
 By default the data goes to a local SQLite file, `az_job_radar.db`. Set `DATABASE_URL`
-(or pass `--database-url`) to use Postgres; install the driver with `pip install -e ".[postgres]"`.
+(or pass `--database-url`) to use Postgres; the `psycopg` driver is installed with the package.
 The schema is managed with Alembic (`src/az_job_radar/migrations`) and is upgraded automatically
 whenever the app or the CLI connects.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph sites["10 job sites"]
+        boss["boss.az"]
+        js["jobsearch.az"]
+        more["hellojob.az, glorri, ...<br/>(8 more)"]
+    end
+
+    subgraph cron["GitHub Actions, every 3 hours"]
+        scrapers["scrapers/<br/>asyncio + httpx<br/>robots.txt, 1 req/s per site"]
+        pipeline["pipeline.py<br/>clean, analyse, dedupe"]
+        dupes["duplicates.py<br/>same ad on several sites"]
+    end
+
+    db[("Neon Postgres<br/>vacancies, scrape_runs")]
+
+    subgraph vercel["Vercel (radar.saidmuradkhan.dev)"]
+        api["FastAPI<br/>/vacancies, /stats/*"]
+        dash["Dashboard /"]
+    end
+
+    jobtrack["jobtrack<br/>(Django)"]
+
+    sites --> scrapers --> pipeline --> dupes --> db
+    db --> api --> dash
+    api -- "X-Preview-Token" --> jobtrack
+```
+
+The scraper and the website never run in the same process: the cron job writes to Postgres,
+the website only reads from it (and keeps the result in memory for 5 minutes). Locally both
+use a SQLite file instead.
+
+## Live numbers
+
+From the scheduled scrape on 16 October 2026 (run #34, GitHub Actions):
+
+| | |
+|---|---|
+| Vacancies read in one run | 926 |
+| New since the previous run (3 hours) | 88 |
+| Same ad found on another site | 268 |
+| Sites that answered | 8 of 10 |
+
+| Site | Ads in the run |
+|---|---|
+| hellojob.az | 400 |
+| boss.az | 158 |
+| jobsearch.az | 150 |
+| vakansiya.biz | 105 |
+| position.az | 86 |
+| ishelanlari.az | 28 |
+| jobs.glorri.az | 18 |
+| smartjob.az, 1is.az | 0 (they block GitHub's servers, work locally) |
+| ejob.az | 0 (answers 403 to the scraper since mid-October) |
+
+The log of every run is kept in the `scrape_runs` table and in the
+[Scrape workflow](https://github.com/saidmuradkhan/az-job-radar/actions/workflows/scrape.yml).
+A source that returns nothing is logged as a warning, so a site that changed its layout is
+easy to spot.
 
 ## How the data flows
 
@@ -97,6 +164,11 @@ GET /stats/salaries?category=finance
 The dashboard shows the same data: a bar chart of the top skills in the current results (a click
 on a bar adds that skill to the filters) and the median salary next to the result count.
 
+![Finance ads with a salary, median salary next to the count](docs/screenshots/filtered.png)
+
+*Screenshots are made from the saved test pages in `tests/fixtures/` (listing pages only, so
+fewer skills are found than on the live site, where the full text of every ad is read).*
+
 ## Deployment
 
 The app runs on Vercel as a single Python function (`index.py`, see `vercel.json`).
@@ -129,6 +201,8 @@ environment variables and turned off by removing them:
 | 1is.az | HTML, 3 pages (premium repeats skipped) | ad page |
 | ishelanlari.az | HTML, 2 pages | ad page |
 
+The scraper does not try to get around a block: a site that refuses it is skipped.
+
 Checked but not used: busy.az (content only rendered in the browser), projobs.az (empty),
 isveren.az (under maintenance), hh API (needs a registered app).
 
@@ -153,6 +227,8 @@ isveren.az (under maintenance), hh API (needs a registered app).
 - [x] FastAPI: `/vacancies`, `/vacancies/{uid}` and a dashboard
 - [x] Preview deployment on Vercel behind a login page
 - [x] FastAPI: `/stats/technologies`, `/stats/salaries`, top skills chart on the dashboard
+- [x] Test coverage above 85%, checked in CI, code formatted with Ruff
+- [x] README: architecture diagram, live numbers, screenshots
 - [ ] Docker + docker-compose
 - [x] Scheduled scraping (GitHub Actions cron)
 
