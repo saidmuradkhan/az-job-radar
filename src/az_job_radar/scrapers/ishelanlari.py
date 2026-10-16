@@ -7,14 +7,10 @@ from bs4 import BeautifulSoup, Tag
 
 from az_job_radar.models import Vacancy
 from az_job_radar.parsing import parse_currency, parse_salary
-from az_job_radar.scrapers.base import BaseScraper
+from az_job_radar.scrapers.base import BaseScraper, tag_text
 
 BASE_URL = "https://ishelanlari.az"
 VACANCY_ID = re.compile(r"/vacancy/(\d+)/")
-
-
-def text_of(element: Tag | None) -> str:
-    return element.get_text(" ", strip=True) if element else ""
 
 
 def parse_date(text: str) -> date | None:
@@ -42,21 +38,21 @@ class IshElanlariScraper(BaseScraper):
         for card in soup.select("div.vac_item"):
             link = card.select_one("a.over_link[href]")
             match = VACANCY_ID.search(link["href"]) if link else None
-            title = text_of(card.select_one("h2"))
+            title = tag_text(card.select_one("h2"))
             if not match or not title:
                 continue
 
-            salary_text = text_of(card.select_one("h4"))
+            salary_text = tag_text(card.select_one("h4"))
             salary_min, salary_max = parse_salary(salary_text)
             vacancies.append(
                 Vacancy(
                     source=self.source,
                     external_id=match.group(1),
                     title=title,
-                    company=text_of(card.select_one("a.comp_name")),
+                    company=tag_text(card.select_one("a.comp_name")),
                     url=urljoin(BASE_URL, link["href"]),
-                    location=text_of(card.select_one("footer span")) or None,
-                    published_on=parse_date(text_of(card.select_one("time"))),
+                    location=tag_text(card.select_one("footer span")) or None,
+                    published_on=parse_date(tag_text(card.select_one("time"))),
                     salary_min=salary_min,
                     salary_max=salary_max,
                     currency=parse_currency(salary_text),
@@ -85,6 +81,6 @@ class IshElanlariScraper(BaseScraper):
 
         return replace(
             vacancy,
-            title=text_of(soup.select_one("h1.text_prime")) or vacancy.title,
+            title=tag_text(soup.select_one("h1.text_prime")) or vacancy.title,
             description=join_lines(body.find_all(["h5", "p"])),
         )

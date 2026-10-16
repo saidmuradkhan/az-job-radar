@@ -30,6 +30,10 @@ def html_to_text(html: str) -> str:
     return BeautifulSoup(html, "html.parser").get_text("\n", strip=True)
 
 
+def tag_text(element: Tag | None) -> str:
+    return element.get_text(" ", strip=True) if element else ""
+
+
 def select_text(parent: Tag, selector: str) -> str | None:
     """Text of the first element matching the CSS selector, or None if it is missing or empty."""
     element = parent.select_one(selector)

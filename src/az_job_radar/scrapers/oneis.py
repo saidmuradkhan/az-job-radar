@@ -3,19 +3,15 @@ from dataclasses import replace
 from datetime import date, datetime
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
 from az_job_radar.models import Vacancy
 from az_job_radar.parsing import parse_currency, parse_salary
-from az_job_radar.scrapers.base import BaseScraper
+from az_job_radar.scrapers.base import BaseScraper, tag_text
 
 BASE_URL = "https://www.1is.az"
 VACANCY_ID = re.compile(r"/vacancy/(\d+)")
 FACT_LABELS = ("İş rejimi", "Təcrübə")
-
-
-def text_of(element: Tag | None) -> str:
-    return element.get_text(" ", strip=True) if element else ""
 
 
 def parse_date(text: str) -> date | None:
@@ -40,7 +36,7 @@ class OneIsScraper(BaseScraper):
                 continue
             link = card.select_one("a.vac-name[href]")
             match = VACANCY_ID.search(link["href"]) if link else None
-            title = text_of(link)
+            title = tag_text(link)
             if not match or not title:
                 continue
 
@@ -49,9 +45,9 @@ class OneIsScraper(BaseScraper):
                     source=self.source,
                     external_id=match.group(1),
                     title=title,
-                    company=text_of(card.select_one("a.comp-link")),
+                    company=tag_text(card.select_one("a.comp-link")),
                     url=urljoin(BASE_URL, link["href"]),
-                    published_on=parse_date(text_of(card.select_one("p.vac-time"))),
+                    published_on=parse_date(tag_text(card.select_one("p.vac-time"))),
                 )
             )
 
@@ -72,7 +68,7 @@ class OneIsScraper(BaseScraper):
 
         info = {}
         for box in soup.select("section.info-boxs [class^=box-info-text]"):
-            paragraphs = [text_of(p) for p in box.find_all("p")]
+            paragraphs = [tag_text(p) for p in box.find_all("p")]
             if len(paragraphs) >= 2 and paragraphs[1] not in ("", "-"):
                 info[paragraphs[0]] = paragraphs[1]
 
@@ -86,8 +82,8 @@ class OneIsScraper(BaseScraper):
 
         return replace(
             vacancy,
-            title=text_of(header.select_one("h2")) or vacancy.title,
-            location=text_of(header.select_one('a[href*="city="]')) or vacancy.location,
+            title=tag_text(header.select_one("h2")) or vacancy.title,
+            location=tag_text(header.select_one('a[href*="city="]')) or vacancy.location,
             salary_min=salary_min,
             salary_max=salary_max,
             currency=parse_currency(salary_text),
