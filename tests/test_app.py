@@ -9,11 +9,7 @@ from az_job_radar.app import create_app, create_app_from_env
 from az_job_radar.collect import collect
 from az_job_radar.dashboard import format_salary, page_links
 from az_job_radar.db import get_engine, upsert_vacancies
-from az_job_radar.gate import COOKIE_NAME, PreviewGate
 from az_job_radar.models import Vacancy
-
-GATE = PreviewGate(user="reviewer", password="letmein", secret="test-secret")
-HTML = {"accept": "text/html"}
 
 VACANCIES = [
     Vacancy(
@@ -68,19 +64,6 @@ def fetch() -> FakeFetch:
 @pytest.fixture
 def open_client(fetch: FakeFetch) -> TestClient:
     return TestClient(create_app(fetch=fetch))
-
-
-@pytest.fixture
-def gated_client(fetch: FakeFetch) -> TestClient:
-    return TestClient(create_app(fetch=fetch, preview_gate=GATE), follow_redirects=False)
-
-
-def login(client: TestClient, password: str = "letmein", next_url: str = "/"):
-    return client.post(
-        "/login",
-        content=f"username=reviewer&password={password}&next={next_url}",
-        headers={"content-type": "application/x-www-form-urlencoded"},
-    )
 
 
 def test_health(open_client: TestClient):
@@ -182,73 +165,6 @@ def test_format_salary():
     assert format_salary(VACANCIES[1]) == ""
 
 
-def test_gate_redirects_browser_to_login(gated_client: TestClient):
-    response = gated_client.get("/vacancies", headers=HTML)
-    assert response.status_code == 303
-    assert response.headers["location"] == "/login?next=/vacancies"
-
-
-def test_gate_returns_401_for_api_clients(gated_client: TestClient):
-    assert gated_client.get("/vacancies").status_code == 401
-    assert gated_client.get("/docs").status_code == 401
-
-
-def test_gate_keeps_health_open(gated_client: TestClient):
-    assert gated_client.get("/health").status_code == 200
-
-
-def test_login_flow(gated_client: TestClient):
-    assert gated_client.get("/login").status_code == 200
-
-    response = login(gated_client, next_url="/vacancies")
-    assert response.status_code == 303
-    assert response.headers["location"] == "/vacancies"
-    assert COOKIE_NAME in response.cookies
-
-    assert gated_client.get("/vacancies").status_code == 200
-
-    gated_client.get("/logout")
-    gated_client.cookies.clear()
-    assert gated_client.get("/vacancies").status_code == 401
-
-
-def test_wrong_password_is_rejected(gated_client: TestClient):
-    response = login(gated_client, password="nope")
-    assert response.status_code == 401
-    assert "Wrong username or password" in response.text
-    assert COOKIE_NAME not in response.cookies
-
-
-def test_login_ignores_external_next(gated_client: TestClient):
-    response = login(gated_client, next_url="//evil.example")
-    assert response.headers["location"] == "/"
-
-
-def test_service_token_passes_gate(gated_client: TestClient):
-    response = gated_client.get("/vacancies", headers={"x-preview-token": "test-secret"})
-    assert response.status_code == 200
-    assert gated_client.get("/vacancies", headers={"x-preview-token": "wrong"}).status_code == 401
-
-
-def test_token_validation():
-    token = GATE.make_token(now=1000)
-    assert GATE.token_is_valid(token, now=2000)
-    assert not GATE.token_is_valid(token, now=10**10)
-    assert not GATE.token_is_valid(token.replace(".", ".x"), now=2000)
-    assert not GATE.token_is_valid("garbage")
-
-
-def test_gate_from_env(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("PREVIEW_USER", raising=False)
-    monkeypatch.delenv("PREVIEW_PASSWORD", raising=False)
-    assert PreviewGate.from_env() is None
-
-    monkeypatch.setenv("PREVIEW_USER", "a")
-    monkeypatch.setenv("PREVIEW_PASSWORD", "b")
-    monkeypatch.setenv("PREVIEW_SECRET", "c")
-    assert PreviewGate.from_env() == PreviewGate(user="a", password="b", secret="c")
-
-
 def test_app_reads_from_the_database_when_configured(tmp_path, monkeypatch):
     url = f"sqlite:///{tmp_path / 'radar.db'}"
     engine = get_engine(url)
@@ -257,7 +173,6 @@ def test_app_reads_from_the_database_when_configured(tmp_path, monkeypatch):
         session.commit()
     engine.dispose()
     monkeypatch.setenv("DATABASE_URL", url)
-    monkeypatch.delenv("PREVIEW_USER", raising=False)
 
     app = create_app_from_env()
     client = TestClient(app)
@@ -270,7 +185,6 @@ def test_app_reads_from_the_database_when_configured(tmp_path, monkeypatch):
 
 def test_app_scrapes_live_without_a_database(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    monkeypatch.delenv("PREVIEW_USER", raising=False)
     app = create_app_from_env()
     assert app.state.cache.fetch is collect
 

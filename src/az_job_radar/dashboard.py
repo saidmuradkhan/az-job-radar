@@ -204,16 +204,13 @@ def page_links(query: str, page: int, pages: int) -> str:
     return f'<nav class="pages">{" ".join(links)}</nav>'
 
 
-def render_dashboard(
-    catalog: "Catalog", filters: Filters, query: str = "", page: int = 1, show_logout: bool = False
-) -> str:
+def render_dashboard(catalog: "Catalog", filters: Filters, query: str = "", page: int = 1) -> str:
     found = catalog.search(filters)
     pages = max(1, -(-len(found) // PER_PAGE))
     page = min(max(page, 1), pages)
     shown = found[(page - 1) * PER_PAGE : page * PER_PAGE]
     merged = sum(len(copies) for copies in catalog.copies.values())
     cards = "".join(render_card(v, catalog.copies.get(v.uid, [])) for v in shown)
-    logout = '<a href="/logout">Log out</a>' if show_logout else ""
     return DASHBOARD_HTML.format(
         filters=render_filters(catalog, filters, found),
         chart=render_top_skills(found, query, filters.tags),
@@ -222,7 +219,6 @@ def render_dashboard(
         merged=merged,
         cards=cards or '<p class="meta">No vacancies match these filters.</p>',
         pages=page_links(query, page, pages),
-        logout=logout,
     )
 
 
@@ -289,7 +285,7 @@ DASHBOARD_HTML = """<!doctype html>
 <main>
   <header>
     <h1>az-job-radar</h1>
-    <span class="meta"><a href="/docs">API docs</a> {logout}</span>
+    <span class="meta"><a href="/docs">API docs</a></span>
   </header>
   <p class="meta">{count} vacancies · {merged} duplicate posts merged{salary}</p>
   <div class="layout">

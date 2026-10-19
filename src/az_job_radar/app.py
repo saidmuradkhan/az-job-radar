@@ -11,7 +11,6 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BeforeValidator, NonNegativeInt
 
-from az_job_radar import gate
 from az_job_radar.collect import collect
 from az_job_radar.dashboard import render_dashboard
 from az_job_radar.db import get_engine, load_recent
@@ -153,18 +152,11 @@ def filters_from_query(
 
 def create_app(
     fetch: Fetch = collect,
-    preview_gate: gate.PreviewGate | None = None,
     cache_ttl_seconds: float = 30 * 60,
     source: str = "live",
 ) -> FastAPI:
     app = FastAPI(title="az-job-radar", version="0.2.0")
-    app.state.gate = preview_gate
     app.state.cache = VacancyCache(fetch, cache_ttl_seconds)
-
-    app.middleware("http")(gate.gate_middleware)
-    app.add_api_route("/login", gate.show_login, methods=["GET"], include_in_schema=False)
-    app.add_api_route("/login", gate.submit_login, methods=["POST"], include_in_schema=False)
-    app.add_api_route("/logout", gate.logout, methods=["GET"], include_in_schema=False)
 
     @app.get("/health")
     async def health() -> dict:
@@ -224,22 +216,15 @@ def create_app(
         page: Annotated[int, Query(ge=1)] = 1,
     ) -> str:
         catalog: Catalog = await request.app.state.cache.get()
-        return render_dashboard(
-            catalog,
-            filters,
-            query=request.url.query,
-            page=page,
-            show_logout=request.app.state.gate is not None,
-        )
+        return render_dashboard(catalog, filters, query=request.url.query, page=page)
 
     return app
 
 
 def create_app_from_env() -> FastAPI:
     """Read from the database when DATABASE_URL is set, otherwise scrape live."""
-    preview_gate = gate.PreviewGate.from_env()
     if not os.environ.get("DATABASE_URL"):
-        return create_app(preview_gate=preview_gate)
+        return create_app()
 
     engine = get_engine()
 
@@ -247,8 +232,6 @@ def create_app_from_env() -> FastAPI:
         since = datetime.now(UTC) - RECENT
         return await asyncio.to_thread(load_recent, engine, since)
 
-    app = create_app(
-        fetch=fetch, preview_gate=preview_gate, cache_ttl_seconds=5 * 60, source="database"
-    )
+    app = create_app(fetch=fetch, cache_ttl_seconds=5 * 60, source="database")
     app.state.engine = engine
     return app

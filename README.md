@@ -6,7 +6,7 @@ Async scraper and data pipeline that collects job vacancies from **10 Azerbaijan
 reads every ad (category, skills, languages, experience, level, work mode), merges the same ad
 posted on several sites, and lets you filter all of it through a FastAPI REST API and a dashboard.
 
-**Live demo:** [radar.saidmuradkhan.dev](https://radar.saidmuradkhan.dev) · [API docs](https://radar.saidmuradkhan.dev/docs) *(private preview, login required for now)*
+**Live demo:** [radar.saidmuradkhan.dev](https://radar.saidmuradkhan.dev) · [API docs](https://radar.saidmuradkhan.dev/docs)
 
 ![Dashboard with filters and the top skills chart](docs/screenshots/dashboard.png)
 
@@ -76,7 +76,7 @@ flowchart LR
 
     sites --> scrapers --> pipeline --> dupes --> db
     db --> api --> dash
-    api -- "X-Preview-Token" --> jobtrack
+    api --> jobtrack
 ```
 
 The scraper and the website never run in the same process: the cron job writes to Postgres,
@@ -176,16 +176,6 @@ Without `DATABASE_URL`, listing pages are scraped on demand and cached in memory
 (no full descriptions, so the analysis only sees titles). With a database, the scheduled
 `az-job-radar scrape` fills it and the site reads from there.
 
-While the project is in review, the site is behind a small login page. It is turned on by
-environment variables and turned off by removing them:
-
-| Variable | Purpose |
-|---|---|
-| `PREVIEW_USER`, `PREVIEW_PASSWORD` | Login credentials. If either is missing, the site is public. |
-| `PREVIEW_SECRET` | Key for signing the session cookie. Other services can send it as `X-Preview-Token`. |
-
-`/health` is always public.
-
 ## Sources
 
 | Site | How | Full text from |
@@ -225,7 +215,7 @@ isveren.az (under maintenance), hh API (needs a registered app).
 - [x] Same ad on several sites shown once (cross-site duplicate detection)
 - [x] Analytics: most requested technologies, salary ranges
 - [x] FastAPI: `/vacancies`, `/vacancies/{uid}` and a dashboard
-- [x] Preview deployment on Vercel behind a login page
+- [x] Public deployment on Vercel
 - [x] FastAPI: `/stats/technologies`, `/stats/salaries`, top skills chart on the dashboard
 - [x] Test coverage above 85%, checked in CI, code formatted with Ruff
 - [x] README: architecture diagram, live numbers, screenshots
