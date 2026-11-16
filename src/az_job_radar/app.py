@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import time
 from collections import Counter, defaultdict
@@ -8,11 +9,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BeforeValidator, NonNegativeInt
+from sqlalchemy.exc import SQLAlchemyError
 
 from az_job_radar.collect import collect
-from az_job_radar.dashboard import render_dashboard
+from az_job_radar.dashboard import UNAVAILABLE_HTML, render_dashboard
 from az_job_radar.db import get_engine, load_recent
 from az_job_radar.duplicates import find_duplicates
 from az_job_radar.models import Vacancy
@@ -22,6 +24,14 @@ from az_job_radar.stats import salary_stats, technology_stats
 
 Fetch = Callable[[], Awaitable[list[Vacancy]]]
 RECENT = timedelta(days=30)
+RETRY_AFTER_SECONDS = 60
+
+logger = logging.getLogger(__name__)
+
+
+class DataUnavailable(Exception):
+    """The vacancies can't be read right now (for example, the database is down)."""
+
 
 # HTML forms send "" for an empty number field; treat it as "no filter".
 OptionalNumber = Annotated[
@@ -78,13 +88,30 @@ class VacancyCache:
         self.ttl_seconds = ttl_seconds
         self.catalog = Catalog()
         self.fetched_at: float | None = None
+        self.failed_at: float | None = None
         self._lock = asyncio.Lock()
 
     async def get(self) -> Catalog:
+        """The cached catalog, refreshed when it is older than the TTL.
+
+        If the source is down, keep serving the last catalog we have and try again
+        only after RETRY_AFTER_SECONDS, so an outage doesn't mean a retry per request.
+        """
         async with self._lock:
-            if self.fetched_at is None or time.time() - self.fetched_at > self.ttl_seconds:
-                self.catalog = Catalog.build(await self.fetch())
-                self.fetched_at = time.time()
+            now = time.time()
+            fresh = self.fetched_at is not None and now - self.fetched_at <= self.ttl_seconds
+            waiting = self.failed_at is not None and now - self.failed_at < RETRY_AFTER_SECONDS
+            if not fresh and not waiting:
+                try:
+                    self.catalog = Catalog.build(await self.fetch())
+                except DataUnavailable as error:
+                    self.failed_at = time.time()
+                    logger.warning("Could not load vacancies: %s", error.__cause__ or error)
+                else:
+                    self.fetched_at = time.time()
+                    self.failed_at = None
+            if self.fetched_at is None:
+                raise DataUnavailable("No vacancies have been loaded yet")
         return self.catalog
 
 
@@ -158,6 +185,17 @@ def create_app(
     app = FastAPI(title="az-job-radar", version="0.2.0")
     app.state.cache = VacancyCache(fetch, cache_ttl_seconds)
 
+    @app.exception_handler(DataUnavailable)
+    async def data_unavailable(request: Request, error: DataUnavailable):
+        headers = {"Retry-After": str(RETRY_AFTER_SECONDS)}
+        if request.url.path == "/":
+            return HTMLResponse(UNAVAILABLE_HTML, status_code=503, headers=headers)
+        return JSONResponse(
+            {"detail": "Vacancy data is temporarily unavailable"},
+            status_code=503,
+            headers=headers,
+        )
+
     @app.get("/health")
     async def health() -> dict:
         return {"status": "ok", "source": source}
@@ -226,11 +264,16 @@ def create_app_from_env() -> FastAPI:
     if not os.environ.get("DATABASE_URL"):
         return create_app()
 
-    engine = get_engine()
+    # Don't connect while the app starts: if the database is down, the app should
+    # still start and answer 503 instead of crashing on every request.
+    engine = get_engine(migrate_schema=False)
 
     async def fetch() -> list[Vacancy]:
         since = datetime.now(UTC) - RECENT
-        return await asyncio.to_thread(load_recent, engine, since)
+        try:
+            return await asyncio.to_thread(load_recent, engine, since)
+        except SQLAlchemyError as error:
+            raise DataUnavailable("The database can't be read") from error
 
     app = create_app(fetch=fetch, cache_ttl_seconds=5 * 60, source="database")
     app.state.engine = engine

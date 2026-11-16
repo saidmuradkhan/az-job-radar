@@ -7,6 +7,7 @@ from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, func, inspect, select
 from sqlalchemy.orm import Session
 
+from az_job_radar import db
 from az_job_radar.db import (
     DEFAULT_DATABASE_URL,
     Base,
@@ -170,3 +171,16 @@ def test_migrations_adopt_tables_created_before_them(tmp_path):
     with engine.connect() as connection:
         assert MigrationContext.configure(connection).get_current_revision() == "0002"
     engine.dispose()
+
+
+def test_engine_can_skip_migrations(tmp_path):
+    engine = get_engine(f"sqlite:///{tmp_path / 'radar.db'}", migrate_schema=False)
+    assert inspect(engine).get_table_names() == []
+    engine.dispose()
+
+
+def test_postgres_connections_time_out(monkeypatch):
+    calls = []
+    monkeypatch.setattr(db, "create_engine", lambda url, **options: calls.append(options))
+    get_engine("postgresql+psycopg://user:pw@db.example/radar", migrate_schema=False)
+    assert calls[0]["connect_args"]["connect_timeout"] == db.CONNECT_TIMEOUT

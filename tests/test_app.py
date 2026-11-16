@@ -5,7 +5,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from az_job_radar.app import create_app, create_app_from_env
+from az_job_radar import app as app_module
+from az_job_radar.app import DataUnavailable, create_app, create_app_from_env
 from az_job_radar.collect import collect
 from az_job_radar.dashboard import format_salary, page_links
 from az_job_radar.db import get_engine, upsert_vacancies
@@ -284,3 +285,71 @@ def test_page_links_keep_the_filters():
     assert '<a href="/?category=it&amp;page=1">1</a>' in links
     assert "<strong>2</strong>" in links
     assert page_links("", page=1, pages=1) == ""
+
+
+class FlakyFetch:
+    """Returns VACANCIES while `up` is true and fails like a dead database otherwise."""
+
+    def __init__(self, up: bool) -> None:
+        self.up = up
+        self.calls = 0
+
+    async def __call__(self) -> list[Vacancy]:
+        self.calls += 1
+        if not self.up:
+            raise DataUnavailable("The database can't be read")
+        return VACANCIES
+
+
+def test_outage_returns_503_instead_of_crashing():
+    client = TestClient(create_app(fetch=FlakyFetch(up=False)))
+
+    page = client.get("/")
+    assert page.status_code == 503
+    assert "temporarily unavailable" in page.text
+    assert page.headers["retry-after"] == "60"
+
+    api = client.get("/vacancies")
+    assert api.status_code == 503
+    assert api.json() == {"detail": "Vacancy data is temporarily unavailable"}
+    assert client.get("/health").status_code == 200
+
+
+def test_last_vacancies_are_served_during_an_outage():
+    fetch = FlakyFetch(up=True)
+    client = TestClient(create_app(fetch=fetch, cache_ttl_seconds=0))
+    assert client.get("/vacancies").json()["count"] == 3
+
+    fetch.up = False
+    response = client.get("/vacancies")
+    assert response.status_code == 200
+    assert response.json()["count"] == 3
+
+
+def test_failed_load_is_not_retried_on_every_request(monkeypatch):
+    clock = [1000.0]
+    monkeypatch.setattr(app_module.time, "time", lambda: clock[0])
+    fetch = FlakyFetch(up=False)
+    client = TestClient(create_app(fetch=fetch))
+
+    client.get("/")
+    client.get("/vacancies")
+    assert fetch.calls == 1
+
+    fetch.up = True
+    clock[0] += app_module.RETRY_AFTER_SECONDS
+    assert client.get("/vacancies").status_code == 200
+    assert fetch.calls == 2
+
+
+def test_app_starts_when_the_database_is_unreachable(tmp_path, monkeypatch):
+    # SQLite can't open a file in a folder that doesn't exist, like a database that is down.
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'missing' / 'radar.db'}")
+
+    app = create_app_from_env()
+    client = TestClient(app)
+
+    assert client.get("/health").status_code == 200
+    assert client.get("/").status_code == 503
+    assert client.get("/stats/salaries").status_code == 503
+    app.state.engine.dispose()

@@ -309,3 +309,36 @@ DASHBOARD_HTML = """<!doctype html>
 </body>
 </html>
 """
+
+
+UNAVAILABLE_HTML = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>az-job-radar · temporarily unavailable</title>
+<style>
+  :root { --text: #1f2328; --muted: #656d76; --bg: #f6f8fa; --accent: #0969da;
+          color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) {
+    :root { --text: #e6edf3; --muted: #8d96a0; --bg: #0d1117; --accent: #4493f8; }
+  }
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 3rem 1rem;
+         color: var(--text); background: var(--bg); }
+  main { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 .5rem; }
+  p { color: var(--muted); }
+  a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>az-job-radar</h1>
+  <p>The vacancy data is temporarily unavailable because the database can't be reached.
+  Please try again in a few minutes.</p>
+  <p><a href="https://github.com/saidmuradkhan/az-job-radar">Source on GitHub</a></p>
+</main>
+</body>
+</html>
+"""
