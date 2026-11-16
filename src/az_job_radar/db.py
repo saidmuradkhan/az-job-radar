@@ -15,6 +15,7 @@ from az_job_radar.models import Vacancy
 
 DEFAULT_DATABASE_URL = "sqlite:///az_job_radar.db"
 MIGRATIONS = Path(__file__).parent / "migrations"
+CONNECT_TIMEOUT = 10  # seconds
 
 
 class Base(DeclarativeBase):
@@ -70,15 +71,25 @@ def database_url() -> str:
     return url
 
 
-def get_engine(url: str | None = None) -> Engine:
+def get_engine(url: str | None = None, migrate_schema: bool = True) -> Engine:
+    """Create the engine; with migrate_schema it connects at once to update the schema.
+
+    The web app passes migrate_schema=False so that it starts even while the database
+    is down (the scrape job runs the migrations instead).
+    """
     url = url or database_url()
     options = {}
     if url.startswith("postgresql"):
         # Neon's connection pooler can't keep prepared statements between requests,
         # and serverless connections may be closed while idle.
-        options = {"connect_args": {"prepare_threshold": None}, "pool_pre_ping": True}
+        # Give up on a dead server instead of using up the function's time limit.
+        options = {
+            "connect_args": {"prepare_threshold": None, "connect_timeout": CONNECT_TIMEOUT},
+            "pool_pre_ping": True,
+        }
     engine = create_engine(url, **options)
-    migrate(engine)
+    if migrate_schema:
+        migrate(engine)
     return engine
 
 
